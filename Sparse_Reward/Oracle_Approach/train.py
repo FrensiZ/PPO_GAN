@@ -197,7 +197,7 @@ def main():
             outer_epochs=config['d_outer_epochs'],
             inner_epochs=config['d_inner_epochs'],
             batch_size=config['d_batch_size'],
-            generated_num=GENERATED_NUM//10,
+            generated_num=GENERATED_NUM,
             positive_samples=positive_samples,
             log_file=disc_pretrain_log,
             lr_patience=D_LR_PATIENCE,

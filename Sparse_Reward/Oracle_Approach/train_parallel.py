@@ -68,7 +68,7 @@ PARALLEL_CONFIG = {
         'transfer_head': [True],
         'do_pretrain': [True]
     },
-    'output_dir': RESULTS_DIR / "ppo_seqgan_search",
+    'output_dir': RESULTS_DIR / "ppo_sparse_search",
 }
 
 # PARALLEL_CONFIG = {
@@ -189,7 +189,7 @@ def run_training(config, gpu_id, seed, output_dir):
     
     # Start training process
     process = subprocess.Popen(
-        ["python", str(BASE_DIR / "ppo_seqgan_train.py")],
+        ["python3", str(BASE_DIR / "train.py")],
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
