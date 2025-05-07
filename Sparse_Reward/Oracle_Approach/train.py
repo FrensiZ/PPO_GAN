@@ -105,7 +105,7 @@ def main():
     log_file = os.path.join(log_folder, "training.log")
     gen_pretrain_log = os.path.join(log_folder, "generator_pretrain.txt")
     disc_pretrain_log = os.path.join(log_folder, "discriminator_pretrain.txt")
-    ppo_log = os.path.join(log_folder, "ppo_training_log.txt")
+    ppo_log = os.path.join(log_folder, "0_ppo_sparse_training.txt")
     
     # Print training configuration
     print(f"Training PPO-SeqGAN with:")
@@ -284,7 +284,8 @@ def main():
         start_token=START_TOKEN,
         generated_num=GENERATED_NUM,
         eval_freq=config['eval_freq'],
-        verbose=0
+        verbose=0,
+        log_path=ppo_log
     )
     
     # Configure learning rate for PPO

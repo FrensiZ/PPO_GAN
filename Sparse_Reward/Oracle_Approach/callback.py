@@ -8,7 +8,7 @@ class CustomCallback(BaseCallback):
     def __init__(self, discriminator, oracle, d_optimizer, 
                  d_steps, k_epochs, d_batch_size,
                  positive_samples, sequence_length, start_token, generated_num,
-                 eval_freq=1, verbose=0):
+                 eval_freq=1, verbose=0, log_path=None):
         
         super(CustomCallback, self).__init__(verbose)
         
@@ -32,6 +32,8 @@ class CustomCallback(BaseCallback):
         self.sequence_length = sequence_length
         
         self.rollout_count = 0
+
+        self.log_path = log_path if log_path else '0_ppo_sparse_training.txt'
         
     def _on_training_start(self):
         """Called at the start of training"""
@@ -62,24 +64,45 @@ class CustomCallback(BaseCallback):
             value_loss = self.logger.name_to_value.get('train/value_loss', 0)
             entropy = self.logger.name_to_value.get('train/entropy_loss', 0)
 
+            # Get rewards directly from rollout buffer
+            avg_reward = 0
+            if hasattr(self.model, 'rollout_buffer') and self.model.rollout_buffer is not None:
+                rewards = self.model.rollout_buffer.rewards
+                episode_starts = self.model.rollout_buffer.episode_starts
+                
+                # Find episode start indices
+                ep_start_idx = np.where(episode_starts)[0]
+                if not episode_starts[0]:
+                    ep_start_idx = np.r_[0, ep_start_idx]
+                    
+                # Calculate rewards for complete sequences
+                if len(ep_start_idx) > 1:
+                    sequence_rewards = np.add.reduceat(rewards, np.r_[0, ep_start_idx[1:]])
+                    avg_reward = float(np.mean(sequence_rewards))
+                elif len(rewards) > 0:
+                    # If only one episode, just take the mean of all rewards
+                    avg_reward = float(np.mean(rewards))
+
             # Log to file after each rollout
-            with open('ppo_seqgan_training.txt', 'a') as f:
+            with open(self.log_path, 'a') as f:
                 # Header
                 if self.rollout_count == self.eval_freq:         
-                    f.write('rollout\tnll\td_loss\td_accuracy\treal_prob\tfake_prob\tpolicy_loss\tvalue_loss\tentropy\n')
+                    f.write('rollout\tnll\td_loss\td_accuracy\treal_prob\tfake_prob\tavg_reward\tpolicy_loss\tvalue_loss\tentropy\n')
                 f.write(f'{self.rollout_count}\t{nll:.6f}\t{d_loss:.6f}\t{disc_metrics["accuracy"]:.6f}\t'
-                        f'{disc_metrics["real_prob"]:.6f}\t{disc_metrics["fake_prob"]:.6f}\t'
+                        f'{disc_metrics["real_prob"]:.6f}\t{disc_metrics["fake_prob"]:.6f}\t{avg_reward:.6f}\t'
                         f'{policy_loss:.6f}\t{value_loss:.6f}\t{entropy:.6f}\n')
+                f.flush()
                     
     def _on_training_end(self):
         """Called at the end of training"""
         pass
 
     def _on_step(self) -> bool:
-        
+    
         if self.n_calls % 100 == 0:
             # Check if we're using a learning rate scheduler
-            current_lr = self.model.optimizer.param_groups[0]['lr']
+            # Access optimizer through the policy
+            current_lr = self.model.policy.optimizer.param_groups[0]['lr']
             initial_lr = self.model.learning_rate
             
             # If we're using a scheduler, the current LR will differ from initial
@@ -164,4 +187,3 @@ class CustomCallback(BaseCallback):
         }
     
         return metrics
-
