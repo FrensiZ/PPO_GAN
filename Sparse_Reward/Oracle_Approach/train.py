@@ -313,7 +313,7 @@ def main():
         ent_coef=config['ppo_ent_coef'],
         vf_coef=config['ppo_vf_coef'],
         max_grad_norm=config['ppo_max_grad_norm'],
-        use_sde=config['ppo_use_sde'],
+        use_sde=config.get('ppo_use_sde', False),
         verbose=0,
         policy_kwargs=dict(
             lstm_hidden_size=config['g_hidden_dim'],
