@@ -40,7 +40,7 @@ class CustomCallback(BaseCallback):
     def _on_rollout_start(self):
         """Called at the start of a rollout"""
         pass
-        
+    
     def _on_rollout_end(self):
         """Called at the end of a rollout - this is where we'll train the discriminator"""
 
@@ -51,32 +51,43 @@ class CustomCallback(BaseCallback):
         # Train the discriminator
         d_loss = self._train_discriminator(negative_samples)
 
-        # Evaluation
-        nll = self.oracle.calculate_nll(negative_samples)
-        disc_metrics = self._evaluate_discriminator(negative_samples)
+        # Only evaluate and log after eval_freq rollouts
+        if self.rollout_count % self.eval_freq == 0:
+            # Evaluation
+            nll = self.oracle.calculate_nll(negative_samples)
+            disc_metrics = self._evaluate_discriminator(negative_samples)
 
-        # Get current PPO metrics directly from logger
-        policy_loss = self.logger.name_to_value.get('train/policy_gradient_loss', 0)
-        value_loss = self.logger.name_to_value.get('train/value_loss', 0)
-        entropy = self.logger.name_to_value.get('train/entropy_loss', 0)
+            # Get current PPO metrics directly from logger
+            policy_loss = self.logger.name_to_value.get('train/policy_gradient_loss', 0)
+            value_loss = self.logger.name_to_value.get('train/value_loss', 0)
+            entropy = self.logger.name_to_value.get('train/entropy_loss', 0)
 
-        # Log to file after each rollout
-        with open('ppo_seqgan_training.txt', 'a') as f:
-            # Header
-            if self.rollout_count == 1:         
-                f.write('rollout\tnll\td_loss\td_accuracy\treal_prob\tfake_prob\tpolicy_loss\tvalue_loss\tentropy\n')
-            f.write(f'{self.rollout_count}\t{nll:.6f}\t{d_loss:.6f}\t{disc_metrics["accuracy"]:.6f}\t'
-                    f'{disc_metrics["real_prob"]:.6f}\t{disc_metrics["fake_prob"]:.6f}\t'
-                    f'{policy_loss:.6f}\t{value_loss:.6f}\t{entropy:.6f}\n')
-        
+            # Log to file after each rollout
+            with open('ppo_seqgan_training.txt', 'a') as f:
+                # Header
+                if self.rollout_count == self.eval_freq:         
+                    f.write('rollout\tnll\td_loss\td_accuracy\treal_prob\tfake_prob\tpolicy_loss\tvalue_loss\tentropy\n')
+                f.write(f'{self.rollout_count}\t{nll:.6f}\t{d_loss:.6f}\t{disc_metrics["accuracy"]:.6f}\t'
+                        f'{disc_metrics["real_prob"]:.6f}\t{disc_metrics["fake_prob"]:.6f}\t'
+                        f'{policy_loss:.6f}\t{value_loss:.6f}\t{entropy:.6f}\n')
+                    
     def _on_training_end(self):
         """Called at the end of training"""
         pass
 
     def _on_step(self) -> bool:
+        
         if self.n_calls % 100 == 0:
+            # Check if we're using a learning rate scheduler
             current_lr = self.model.optimizer.param_groups[0]['lr']
-            print(f"Step {self.n_calls}, Current learning rate: {current_lr}")
+            initial_lr = self.model.learning_rate
+            
+            # If we're using a scheduler, the current LR will differ from initial
+            if isinstance(initial_lr, float) and current_lr != initial_lr:
+                print(f"Step {self.n_calls}, Current learning rate: {current_lr}")
+            elif callable(initial_lr):  # If we're using a callable LR function
+                print(f"Step {self.n_calls}, Current learning rate: {current_lr}")
+        
         return True
 
     def _generate_samples(self, num_samples):

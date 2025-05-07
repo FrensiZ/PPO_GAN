@@ -42,7 +42,6 @@ ORACLE_PARAMS_PATH = SAVE_DIR / 'target_params.pkl'
 
 # GENERATOR
 G_NUM_LAYERS = 2
-G_EVAL_FREQ = 1
 G_LR_PATIENCE = 5
 G_LR_DECAY = 0.5
 
@@ -50,7 +49,10 @@ G_LR_DECAY = 0.5
 DISCRIMINATOR_EMB_DIM = 64
 DISCRIMINATOR_HIDDEN_DIM = 128
 D_DROPOUT_RATE = 0.1
+D_LR_PATIENCE = 10
+D_LR_DECAY = 0.5
 D_LR_MIN = 1e-5
+D_PRETRAIN_LR = 5e-3
 
 def set_seed(seed):
     """Set random seed for reproducibility."""
@@ -112,7 +114,6 @@ def main():
     print(f"  Generator Hidden Dim: {config['g_hidden_dim']}")
     print(f"  PPO Learning Rate: {config['ppo_learning_rate']}")
     print(f"  Discriminator Learning Rate: {config['d_learning_rate']}")
-    print(f"  Pre-training Epochs: {config['pretrain_epochs']}")
     print(f"  PPO Total Timesteps: {config['ppo_total_timesteps']}")
     
     # Create Oracle
@@ -163,6 +164,9 @@ def main():
     
     # Initialize optimizers
     g_optimizer_pretrain = th.optim.Adam(generator.parameters(), lr=config['g_pretrain_lr'])
+
+    # Use different learning rates for pretraining and adversarial phases
+    d_pretrain_optimizer = th.optim.Adam(discriminator.parameters(), lr=D_PRETRAIN_LR)
     d_optimizer = th.optim.Adam(discriminator.parameters(), lr=config['d_learning_rate'])
     
     # Pretraining phase
@@ -173,11 +177,11 @@ def main():
             target_lstm=oracle,
             generator=generator,
             optimizer=g_optimizer_pretrain,
-            pre_epoch_num=config['pretrain_epochs'],
+            pre_epoch_num=config['g_pretrain_epochs'],
             batch_size=config['g_pretrain_batch_size'],
             generated_num=GENERATED_NUM,
             positive_samples=positive_samples,
-            eval_freq=G_EVAL_FREQ,
+            eval_freq=config['eval_freq'],
             lr_patience=G_LR_PATIENCE,
             lr_decay=G_LR_DECAY,
             log_path=gen_pretrain_log
@@ -189,15 +193,15 @@ def main():
             target_lstm=oracle,
             generator=generator,
             discriminator=discriminator,
-            optimizer=d_optimizer,
+            optimizer=d_pretrain_optimizer,
             outer_epochs=config['d_outer_epochs'],
             inner_epochs=config['d_inner_epochs'],
             batch_size=config['d_batch_size'],
-            generated_num=GENERATED_NUM,
+            generated_num=GENERATED_NUM//10,
             positive_samples=positive_samples,
             log_file=disc_pretrain_log,
-            lr_patience=config['d_lr_patience'],
-            lr_decay=config['d_lr_decay'],
+            lr_patience=D_LR_PATIENCE,
+            lr_decay=D_LR_DECAY,
             min_lr=D_LR_MIN
         )
 
@@ -214,24 +218,44 @@ def main():
         # Save discriminator
         th.save({
             'model_state_dict': discriminator.state_dict(),
-            'optimizer_state_dict': d_optimizer.state_dict()
+            'optimizer_state_dict': d_pretrain_optimizer.state_dict()
         }, disc_save_path)
         
         print(f"Saved pretrained models to {output_dir}")
+        
+        ## TRANSFER OPTIMIZER STATE ##
+        print("Transferring optimizer state from pretraining to adversarial phase...")
+        
+        pretrain_state = d_pretrain_optimizer.state_dict()
+        d_optimizer_state = d_optimizer.state_dict()
+
+        # Copy everything except param_groups (which contains the learning rate)
+        for key in pretrain_state.keys():
+            if key != 'param_groups':
+                d_optimizer_state[key] = pretrain_state[key]
+        
+        # For param_groups, copy everything except learning rate
+        for pg_pretrain, pg_adv in zip(pretrain_state['param_groups'], d_optimizer_state['param_groups']):
+            for k in pg_pretrain.keys():
+                if k != 'lr':  # Keep all parameters except learning rate
+                    pg_adv[k] = pg_pretrain[k]
+        
+        # Load the modified state
+        d_optimizer.load_state_dict(d_optimizer_state)
+
     else:
         # Load pretrained models if not doing pretraining
         try:
             print("Loading pretrained models...")
+
             gen_load_path = config.get('gen_load_path', os.path.join(output_dir, "generator_pretrained.pth"))
             disc_load_path = config.get('disc_load_path', os.path.join(output_dir, "discriminator_pretrained.pth"))
             
             gen_checkpoint = th.load(gen_load_path, map_location=device)
             generator.load_state_dict(gen_checkpoint['model_state_dict'])
-            g_optimizer_pretrain.load_state_dict(gen_checkpoint['optimizer_state_dict'])
             
             disc_checkpoint = th.load(disc_load_path, map_location=device)
             discriminator.load_state_dict(disc_checkpoint['model_state_dict'])
-            d_optimizer.load_state_dict(disc_checkpoint['optimizer_state_dict'])
             
         except Exception as e:
             print(f"Error loading pretrained models: {e}")
@@ -268,7 +292,7 @@ def main():
         # Use linearly decaying learning rate
         min_lr = config['min_ppo_lr']
         max_lr = config['ppo_learning_rate']
-        timesteps = config['total_timesteps']
+        timesteps = config['ppo_total_timesteps']
         learning_rate = get_linear_fn(min_lr, max_lr, timesteps)
     else:
         # Use constant learning rate
