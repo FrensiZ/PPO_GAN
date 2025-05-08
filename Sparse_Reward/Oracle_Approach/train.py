@@ -413,7 +413,7 @@ def main():
             }
         },
         "model_paths": {
-            "ppo": str(ppo_final_path),
+            "ppo": None,
             "discriminator": str(disc_save_path)
         }
     }

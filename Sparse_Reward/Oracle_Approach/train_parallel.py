@@ -59,7 +59,7 @@ PARALLEL_CONFIG = {
         'ppo_gamma': [0.99],
         'ppo_gae_lambda': [0.95],
         'ppo_clip_range': [0.1],
-        'ppo_ent_coef': [0.0],
+        'ppo_ent_coef': [0.01],
         'ppo_vf_coef': [0.5],
         'ppo_clip_range_vf': [None],
         'ppo_max_grad_norm': [0.5],
