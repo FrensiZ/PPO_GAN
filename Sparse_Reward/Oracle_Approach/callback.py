@@ -69,6 +69,7 @@ class CustomCallback(BaseCallback):
             avg_reward = 0
             if hasattr(self.model, 'rollout_buffer') and self.model.rollout_buffer is not None:
                 rewards = self.model.rollout_buffer.rewards
+                episode_starts = self.model.rollout_buffer.episode_starts
                 
                 # Find episode start indices
                 ep_start_idx = np.where(episode_starts)[0]

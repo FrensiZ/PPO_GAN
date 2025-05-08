@@ -30,7 +30,7 @@ PARALLEL_CONFIG = {
         'g_hidden_dim': [256, 512],
         
         # Evaluation
-        'eval_freq': [1],
+        'eval_freq': [2],
 
         # Pretraining Generator
         'g_pretrain_lr': [1e-2],
