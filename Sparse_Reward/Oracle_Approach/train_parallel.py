@@ -22,15 +22,15 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 # Settings for hyperparameter search
 PARALLEL_CONFIG = {
     
-    'num_seeds': 3,
+    'num_seeds': 4,
     
     'param_grid': {
 
         # Generator architecture
-        'g_hidden_dim': [256, 512],
+        'g_hidden_dim': [256],
         
         # Evaluation
-        'eval_freq': [2],
+        'eval_freq': [3],
 
         # Pretraining Generator
         'g_pretrain_lr': [1e-2],
@@ -41,26 +41,26 @@ PARALLEL_CONFIG = {
         'd_outer_epochs': [15],
         'd_inner_epochs': [2],
         'd_batch_size': [128],
-        'd_learning_rate': [1e-6],
+        'd_learning_rate': [1e-5, 1e-6],
         
         'd_steps': [1],
         'k_epochs': [1],
 
         # # PPO parameters
-        'ppo_total_timesteps': [10 * 20 * 100],
-        'ppo_n_steps': [10 * 20],
-        'ppo_batch_size': [5 * 20],
-        'ppo_n_epochs': [5],
+        'ppo_total_timesteps': [10*20 * 200],
+        'ppo_n_steps': [10*20, 20*20],
+        'ppo_batch_size': [5*20],
+        'ppo_n_epochs': [4, 8],
 
         'use_linear_lr_decay': [False],
         'min_ppo_lr': [1e-5],
-        'ppo_learning_rate': [1e-3],
+        'ppo_learning_rate': [1e-3, 5e-4, 1e-4],
         
-        'ppo_gamma': [0.99],
+        'ppo_gamma': [1.0],
         'ppo_gae_lambda': [0.95],
-        'ppo_clip_range': [0.1],
-        'ppo_ent_coef': [0.01],
-        'ppo_vf_coef': [0.5],
+        'ppo_clip_range': [0.1, 0.2],
+        'ppo_ent_coef': [0.01, 0.0],
+        'ppo_vf_coef': [0.5, 0.75],
         'ppo_clip_range_vf': [None],
         'ppo_max_grad_norm': [0.5],
         
