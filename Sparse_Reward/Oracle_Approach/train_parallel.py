@@ -47,10 +47,16 @@ PARALLEL_CONFIG = {
         'k_epochs': [1],
         
         # PPO parameters
-        'ppo_total_timesteps': [10 * 20 * 100],
-        'ppo_n_steps': [10 * 20],
-        'ppo_batch_size': [5 * 20],
-        'ppo_n_epochs': [5],
+        'ppo_total_timesteps': [5 * 20 * 30],
+        'ppo_n_steps': [5 * 20],
+        'ppo_batch_size': [1 * 20],
+        'ppo_n_epochs': [2],
+
+        # # PPO parameters
+        # 'ppo_total_timesteps': [10 * 20 * 100],
+        # 'ppo_n_steps': [10 * 20],
+        # 'ppo_batch_size': [5 * 20],
+        # 'ppo_n_epochs': [5],
 
         'use_linear_lr_decay': [True],
         'min_ppo_lr': [1e-5],

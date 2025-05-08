@@ -243,6 +243,10 @@ def main():
         # Load the modified state
         d_optimizer.load_state_dict(d_optimizer_state)
 
+        #### TEMP
+        print('0000  SUCCESS: Pretraining completed! and loaded OPTIMIZER WEIGHTS')    
+        #### TEMP
+
     else:
         # Load pretrained models if not doing pretraining
         try:
@@ -339,6 +343,13 @@ def main():
             num_layers=G_NUM_LAYERS,
             device=device
         )
+
+    #### TEMP
+    templ_eval_disct = discriminator.evaluate_disc_pretrain(discriminator, oracle, generator, num_samples=GENERATED_NUM)    
+    print('ROLLOUT: Accuracy\tReal Prob\tFake Prob\t of GENERATOR PRE PPO')
+    print('----------------------------------')
+    print(f'{disc_temp_gen["accuracy"]:.6f}\t{disc_temp_gen["real_prob"]:.6f}\t{disc_temp_gen["fake_prob"]:.6f}')
+    #### TEMP
     
     # Train with PPO
     print("Starting PPO training...")

@@ -8,7 +8,8 @@ class CustomCallback(BaseCallback):
     def __init__(self, discriminator, oracle, d_optimizer, 
                  d_steps, k_epochs, d_batch_size,
                  positive_samples, sequence_length, start_token, generated_num,
-                 eval_freq=1, verbose=0, log_path=None):
+                 eval_freq=1, verbose=0, log_path=None,
+                 generator=None):
         
         super(CustomCallback, self).__init__(verbose)
         
@@ -34,6 +35,10 @@ class CustomCallback(BaseCallback):
         self.rollout_count = 0
 
         self.log_path = log_path if log_path else '0_ppo_sparse_training.txt'
+
+        ### TEMP
+        self.generator = generator
+        #### TEMP
         
     def _on_training_start(self):
         """Called at the start of training"""
@@ -48,7 +53,26 @@ class CustomCallback(BaseCallback):
 
         self.rollout_count += 1
 
+        #### TEMP
+        temp_sample = self.generator.generate(self.generated_num)
+        #### TEMP
+
         negative_samples = self._generate_samples(self.generated_num)
+
+        #### TEMP
+        disc_temp_gen = self._evaluate_discriminator(negative_samples)
+        disc_temp_ppo = self._evaluate_discriminator(negative_samples)
+
+        
+        print('ROLLOUT: Accuracy\tReal Prob\tFake Prob\t of GENERATOR IN PPO')
+        print('----------------------------------')
+        print(f'{disc_temp_gen["accuracy"]:.6f}\t{disc_temp_gen["real_prob"]:.6f}\t{disc_temp_gen["fake_prob"]:.6f}')
+        print('ROLLOUT: Accuracy\tReal Prob\tFake Prob\t of PPO')
+        print('----------------------------------')
+        print(f'{disc_temp_ppo["accuracy"]:.6f}\t{disc_temp_ppo["real_prob"]:.6f}\t{disc_temp_ppo["fake_prob"]:.6f}')
+        #### TEMP
+
+
 
         # Train the discriminator
         d_loss = self._train_discriminator(negative_samples)
