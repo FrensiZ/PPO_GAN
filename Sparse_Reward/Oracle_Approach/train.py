@@ -15,7 +15,7 @@ from sb3_contrib.ppo_recurrent import RecurrentPPO
 # Import local modules
 from oracle import Oracle
 from generator import Generator, pretrain_generator, transfer_weights_from_saved
-from discriminator import Discriminator, pretrain_discriminator
+from discriminator import Discriminator, pretrain_discriminator, evaluate_disc_pretrain
 from environment import TokenGenerationEnv
 from callback import CustomCallback
 
