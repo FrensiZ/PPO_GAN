@@ -48,7 +48,7 @@ G_LR_DECAY = 0.5
 # DISCRIMINATOR
 DISCRIMINATOR_EMB_DIM = 64
 DISCRIMINATOR_HIDDEN_DIM = 128
-D_DROPOUT_RATE = 0.1
+D_DROPOUT_RATE = 0.2
 D_LR_PATIENCE = 10
 D_LR_DECAY = 0.5
 D_LR_MIN = 1e-5
@@ -243,9 +243,6 @@ def main():
         # Load the modified state
         d_optimizer.load_state_dict(d_optimizer_state)
 
-        #### TEMP
-        print('0000  SUCCESS: Pretraining completed! and loaded OPTIMIZER WEIGHTS')    
-        #### TEMP
 
     else:
         # Load pretrained models if not doing pretraining
@@ -344,12 +341,6 @@ def main():
             device=device
         )
 
-    #### TEMP
-    templ_eval_disct = discriminator.evaluate_disc_pretrain(discriminator, oracle, generator, num_samples=GENERATED_NUM)    
-    print('ROLLOUT: Accuracy\tReal Prob\tFake Prob\t of GENERATOR PRE PPO')
-    print('----------------------------------')
-    print(f'{disc_temp_gen["accuracy"]:.6f}\t{disc_temp_gen["real_prob"]:.6f}\t{disc_temp_gen["fake_prob"]:.6f}')
-    #### TEMP
     
     # Train with PPO
     print("Starting PPO training...")
@@ -358,17 +349,12 @@ def main():
         callback=callback
     )
     
-    # Save the final PPO model
-    ppo_final_path = os.path.join(output_dir, "ppo_final_model")
-    ppo_model.save(ppo_final_path)
-    print(f"Saved final PPO model to {ppo_final_path}")
-    
     # Generate samples from the trained model for evaluation
     print("Evaluating final model...")
     final_samples = []
     
     # Generate sequences using the PPO policy
-    num_eval_samples = 1000
+    num_eval_samples = 500
     
     obs = np.array([START_TOKEN] * num_eval_samples)
     lstm_states = None

@@ -30,7 +30,7 @@ PARALLEL_CONFIG = {
         'g_hidden_dim': [256, 512],
         
         # Evaluation
-        'eval_freq': [3],
+        'eval_freq': [1],
 
         # Pretraining Generator
         'g_pretrain_lr': [1e-2],
@@ -41,26 +41,20 @@ PARALLEL_CONFIG = {
         'd_outer_epochs': [15],
         'd_inner_epochs': [2],
         'd_batch_size': [128],
-        'd_learning_rate': [1e-5],
+        'd_learning_rate': [1e-6],
         
-        'd_steps': [3],
+        'd_steps': [1],
         'k_epochs': [1],
-        
-        # PPO parameters
-        'ppo_total_timesteps': [5 * 20 * 30],
-        'ppo_n_steps': [5 * 20],
-        'ppo_batch_size': [1 * 20],
-        'ppo_n_epochs': [2],
 
         # # PPO parameters
-        # 'ppo_total_timesteps': [10 * 20 * 100],
-        # 'ppo_n_steps': [10 * 20],
-        # 'ppo_batch_size': [5 * 20],
-        # 'ppo_n_epochs': [5],
+        'ppo_total_timesteps': [10 * 20 * 100],
+        'ppo_n_steps': [10 * 20],
+        'ppo_batch_size': [5 * 20],
+        'ppo_n_epochs': [5],
 
-        'use_linear_lr_decay': [True],
+        'use_linear_lr_decay': [False],
         'min_ppo_lr': [1e-5],
-        'ppo_learning_rate': [5e-4],
+        'ppo_learning_rate': [1e-3],
         
         'ppo_gamma': [0.99],
         'ppo_gae_lambda': [0.95],
@@ -77,57 +71,6 @@ PARALLEL_CONFIG = {
     },
     'output_dir': RESULTS_DIR / "ppo_sparse_search",
 }
-
-# PARALLEL_CONFIG = {
-#     'num_seeds': 3,
-#     'param_grid': {
-
-#         # Generator architecture
-#         'g_hidden_dim': [256, 512],
-        
-#         # Evaluation
-#         'eval_freq': [3]
-
-#         # Pretraining Generator
-#         'g_pretrain_lr': [1e-2, 5e-3],
-#         'g_pretrain_batch_size': [32, 64],
-#         'g_pretrain_epochs': [100, 150],
-
-#         # Discriminator parameters
-#         'd_outer_epochs': [5, 10],
-#         'd_inner_epochs': [2, 3],
-
-#         'd_batch_size': [128],
-    
-#         'd_learning_rate': [5e-4, 1e-4],
-        
-#         'd_steps': [3, 5],
-#         'k_epochs': [1, 2],
-        
-#         # PPO parameters
-#         'ppo_total_timesteps': [5000, 10000],
-#         'ppo_n_steps': [64, 128],
-#         'ppo_batch_size': [32, 64],
-#         'ppo_n_epochs': [5, 10],
-
-#         'use_linear_lr_decay': [True],
-#         'min_ppo_lr': [1e-5],
-#         'ppo_learning_rate': [5e-4, 1e-4, 1e-3],
-        
-#         'ppo_gamma': [0.99],
-#         'ppo_gae_lambda': [0.95],
-#         'ppo_clip_range': [0.1, 0.2],
-#         'ppo_ent_coef': [0.0, 0.01, 0.05],
-#         'ppo_vf_coef': [0.5],
-#         'ppo_max_grad_norm': [0.5],
-        
-#         # Weight transfer
-#         'transfer_weights': [True],
-#         'transfer_head': [True],
-#         'do_pretrain': [True]
-#     },
-#     'output_dir': RESULTS_DIR / "ppo_seqgan_search",
-# }
 
 def get_config_hash(config):
     """Generate a unique hash for a configuration."""

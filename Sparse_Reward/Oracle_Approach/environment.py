@@ -19,17 +19,15 @@ class TokenGenerationEnv(gym.Env):
         self.current_sequence = None
         self.current_position = None
     
-    def reset(self, seed = None, options = None):
-        
-        # Initialize with start token
-        self.current_sequence = [self.start_token]
-        self.current_position = 1  # Position after start token
+    def reset(self, seed=None, options=None):
+
+        self.current_sequence = []
+        self.current_position = 0
         
         return int(self.start_token), {}
-    
-    def step(self, action):
 
-        # Add the selected token to the sequence
+    def step(self, action):
+        
         self.current_sequence.append(int(action))
         self.current_position += 1
         
@@ -38,7 +36,6 @@ class TokenGenerationEnv(gym.Env):
         
         # Calculate reward
         reward = 0.0
-
         if done:
             reward = self._get_reward(self.current_sequence)
             
@@ -47,7 +44,7 @@ class TokenGenerationEnv(gym.Env):
     
     def _get_reward(self, sequence):
         
-        sequence_tensor = th.tensor([sequence], dtype=th.long, device=self.device)
+        sequence_tensor = th.tensor([sequence], dtype=th.long, device=self.device)        
         reward = float(self.discriminator.get_reward(sequence_tensor).cpu())
 
         return reward
