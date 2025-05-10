@@ -209,14 +209,14 @@ def main():
         )
 
         # Save pretrained models
-        # gen_save_path = os.path.join(output_dir, "generator_pretrained.pth")
+        gen_save_path = os.path.join(output_dir, "generator_pretrained.pth")
         # disc_save_path = os.path.join(output_dir, "discriminator_pretrained.pth")
         
-        # # Save generator
-        # th.save({
-        #     'model_state_dict': generator.state_dict(),
-        #     'optimizer_state_dict': g_optimizer_pretrain.state_dict()
-        # }, gen_save_path)
+        # Save generator
+        th.save({
+            'model_state_dict': generator.state_dict(),
+            'optimizer_state_dict': g_optimizer_pretrain.state_dict()
+        }, gen_save_path)
         
         # # Save discriminator
         # th.save({
@@ -406,7 +406,7 @@ def main():
     # Create results summary
     results = {
         "config": config_with_seed,
-        "training_time": training_time,
+        "training_time": training_time
         # "final_metrics": {
         #     "nll": final_nll,
         #     "discriminator": {
@@ -427,12 +427,11 @@ def main():
         json.dump(results, f, indent=2)
     
     print(f"Training completed in {training_time:.2f} seconds!")
-    print(f"Results saved to {output_dir}")
-    print(f"Final NLL: {final_nll:.4f}")
-    print(f"Final Discriminator Metrics:")
-    print(f"  Accuracy: {accuracy:.4f}")
-    print(f"  Real Prob: {real_prob:.4f}")
-    print(f"  Fake Prob: {fake_prob:.4f}")
+    # print(f"Results saved to {output_dir}")
+    # print(f"Final Discriminator Metrics:")
+    # print(f"  Accuracy: {accuracy:.4f}")
+    # print(f"  Real Prob: {real_prob:.4f}")
+    # print(f"  Fake Prob: {fake_prob:.4f}")
     
     # Close environment
     env.close()
