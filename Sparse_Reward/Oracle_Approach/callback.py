@@ -88,7 +88,7 @@ class CustomCallback(BaseCallback):
                 # Header
                 if self.rollout_count == self.eval_freq:   
                     f.write('rollout\tnll\tpolicy_loss\tvalue_loss\tentropy\td_loss\td_accuracy\treal_prob\tfake_prob\tavg_reward\n')
-                f.write(f'{self.rollout_count}\t{nll:.6f}{policy_loss:.6f}\t{value_loss:.6f}\t{entropy:.6f}\t'
+                f.write(f'{self.rollout_count}\t{nll:.6f}\t{policy_loss:.6f}\t{value_loss:.6f}\t{entropy:.6f}\t'
                         f'{d_loss:.6f}\t{disc_metrics["accuracy"]:.6f}\t{disc_metrics["real_prob"]:.6f}\t{disc_metrics["fake_prob"]:.6f}\t{avg_reward:.6f}\n')
                 f.flush()
                     

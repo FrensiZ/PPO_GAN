@@ -22,7 +22,7 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 # Settings for hyperparameter search
 PARALLEL_CONFIG = {
     
-    'num_seeds': 10000,
+    'num_seeds': 6,
     
     'param_grid': {
 
@@ -53,7 +53,7 @@ PARALLEL_CONFIG = {
         'use_linear_lr_decay': [False],
         'min_ppo_lr': [1e-5],
 
-        'ppo_learning_rate': [8e-4],
+        'ppo_learning_rate': [8e-4, 4e-4],
         
         'ppo_gamma': [0.99],
         'ppo_gae_lambda': [0.95],
