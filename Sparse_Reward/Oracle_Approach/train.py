@@ -171,6 +171,8 @@ def main():
     # Use different learning rates for pretraining and adversarial phases
     d_pretrain_optimizer = th.optim.Adam(discriminator.parameters(), lr=D_PRETRAIN_LR)
     d_optimizer = th.optim.Adam(discriminator.parameters(), lr=config['d_learning_rate'])
+
+    gen_weights_path = None
     
     # Pretraining phase
     if config.get('do_pretrain', True):
@@ -209,20 +211,20 @@ def main():
         )
 
         # Save pretrained models
-        gen_save_path = os.path.join(output_dir, "generator_pretrained.pth")
-        # disc_save_path = os.path.join(output_dir, "discriminator_pretrained.pth")
+        gen_weights_path = os.path.join(output_dir, "generator_pretrained.pth")
+        disc_save_path = os.path.join(output_dir, "discriminator_pretrained.pth")
         
         # Save generator
         th.save({
             'model_state_dict': generator.state_dict(),
             'optimizer_state_dict': g_optimizer_pretrain.state_dict()
-        }, gen_save_path)
+        }, gen_weights_path)
         
-        # # Save discriminator
-        # th.save({
-        #     'model_state_dict': discriminator.state_dict(),
-        #     'optimizer_state_dict': d_pretrain_optimizer.state_dict()
-        # }, disc_save_path)
+        # Save discriminator
+        th.save({
+            'model_state_dict': discriminator.state_dict(),
+            'optimizer_state_dict': d_pretrain_optimizer.state_dict()
+        }, disc_save_path)
         
         # print(f"Saved pretrained models to {output_dir}")
         
@@ -251,19 +253,51 @@ def main():
         # Load pretrained models if not doing pretraining
         try:
             print("Loading pretrained models...")
-
-            gen_load_path = config.get('gen_load_path', os.path.join(output_dir, "generator_pretrained.pth"))
-            disc_load_path = config.get('disc_load_path', os.path.join(output_dir, "discriminator_pretrained.pth"))
             
-            gen_checkpoint = th.load(gen_load_path, map_location=device)
+            # Determine paths based on seed
+            seed_prefix = f"{seed}_"
+            gen_weights_path = os.path.join(SAVE_DIR, f"{seed_prefix}generator_pretrained.pth")
+            disc_load_path = os.path.join(SAVE_DIR, f"{seed_prefix}discriminator_pretrained.pth")
+            
+            print(f"Using generator weights from: {gen_weights_path}")
+            print(f"Loading discriminator from: {disc_load_path}")
+            
+            # Load generator (only needed for the discriminator training)
+            gen_checkpoint = th.load(gen_weights_path, map_location=device)
             generator.load_state_dict(gen_checkpoint['model_state_dict'])
             
+            # Load discriminator
             disc_checkpoint = th.load(disc_load_path, map_location=device)
             discriminator.load_state_dict(disc_checkpoint['model_state_dict'])
+            
+            # Transfer optimizer state from pretrained discriminator to adversarial discriminator
+            print("Transferring optimizer state from pretrained discriminator to adversarial phase...")
+
+            if 'optimizer_state_dict' in disc_checkpoint:
+                pretrain_state = disc_checkpoint['optimizer_state_dict']
+                d_optimizer_state = d_optimizer.state_dict()
+                
+                # Copy everything except param_groups (which contains the learning rate)
+                for key in pretrain_state.keys():
+                    if key != 'param_groups':
+                        d_optimizer_state[key] = pretrain_state[key]
+                
+                # For param_groups, copy everything except learning rate
+                for pg_pretrain, pg_adv in zip(pretrain_state['param_groups'], d_optimizer_state['param_groups']):
+                    for k in pg_pretrain.keys():
+                        if k != 'lr':  # Keep all parameters except learning rate
+                            pg_adv[k] = pg_pretrain[k]
+                
+                # Load the modified state
+                d_optimizer.load_state_dict(d_optimizer_state)
+                print("Successfully transferred discriminator optimizer state")
+            else:
+                print("Warning: No optimizer state found in discriminator checkpoint")
             
         except Exception as e:
             print(f"Error loading pretrained models: {e}")
             sys.exit(1)
+
     
     # Set up the environment for PPO
     env = TokenGenerationEnv(
@@ -333,7 +367,7 @@ def main():
     if config.get('transfer_weights', True):
         print("Transferring weights from pretrained generator to PPO policy...")
         ppo_model = transfer_weights_from_saved(
-            weights_path=gen_save_path,
+            weights_path=gen_weights_path,
             ppo_model=ppo_model,
             transfer_head=config.get('transfer_head', True),
             vocab_size=VOCAB_SIZE,

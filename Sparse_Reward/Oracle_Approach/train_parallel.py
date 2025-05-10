@@ -22,7 +22,7 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 # Settings for hyperparameter search
 PARALLEL_CONFIG = {
     
-    'num_seeds': 6,
+    'num_seeds': 10000,
     
     'param_grid': {
 
@@ -30,7 +30,7 @@ PARALLEL_CONFIG = {
         'g_hidden_dim': [256],
         
         # Evaluation
-        'eval_freq': [1],
+        'eval_freq': [2],
 
         # Pretraining Generator
         'g_pretrain_lr': [1e-2],
@@ -41,19 +41,19 @@ PARALLEL_CONFIG = {
         # Discriminator parameters
         'd_learning_rate': [2.5e-6],
         
-        'd_steps': [2],
-        'k_epochs': [3],
+        'd_steps': [1],
+        'k_epochs': [2],
 
         # # PPO parameters
-        'ppo_total_timesteps': [20 * 64 * 50],
-        'ppo_n_steps': [20 * 64],
-        'ppo_batch_size': [20 * 32],
+        'ppo_total_timesteps': [20 * 8 * 50],
+        'ppo_n_steps': [20 * 8],
+        'ppo_batch_size': [20 * 4,],
         'ppo_n_epochs': [2],
 
         'use_linear_lr_decay': [False],
         'min_ppo_lr': [1e-5],
 
-        'ppo_learning_rate': [1e-3, 8e-4, 6e-4, 4e-4, 2e-4, 1e-4, 8e-5, 6e-5, 4e-5, 2e-5, 1e-5],
+        'ppo_learning_rate': [4e-4],
         
         'ppo_gamma': [0.999],
         'ppo_gae_lambda': [0.95],
@@ -64,9 +64,9 @@ PARALLEL_CONFIG = {
         'ppo_max_grad_norm': [0.5],
         
         # Weight transfer
+        'do_pretrain': [True],
         'transfer_weights': [True],
-        'transfer_head': [True],
-        'do_pretrain': [True]
+        'transfer_head': [True]
     },
     'output_dir': RESULTS_DIR / "ppo_sparse_search",
 }
