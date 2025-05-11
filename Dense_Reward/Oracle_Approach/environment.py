@@ -1,0 +1,61 @@
+import torch as th
+import gymnasium as gym
+from gymnasium import spaces
+
+class TokenGenerationEnv(gym.Env):
+    def __init__(self, discriminator, vocab_size, seq_length, start_token, device):
+        super(TokenGenerationEnv, self).__init__()
+        
+        self.discriminator = discriminator
+        self.vocab_size = vocab_size
+        self.seq_length = seq_length
+        self.start_token = start_token
+        self.device = device
+        
+        self.action_space = spaces.Discrete(vocab_size)
+        self.observation_space = spaces.Discrete(vocab_size)
+        
+        self.current_position = None
+        self.hidden_state = None
+        self.previous_prob = None
+    
+    def reset(self, seed=None, options=None):
+        self.current_position = 0
+        self.hidden_state = None
+        self.previous_prob = None
+        
+        return int(self.start_token), {}
+
+    def step(self, action):
+        # Get reward for this step
+        reward = self._get_step_reward(action)
+        
+        # Increment position after calculating reward
+        self.current_position += 1
+        
+        # Check if the sequence is complete
+        done = (self.current_position >= self.seq_length)
+        
+        # Return observation, reward, done flag, truncated and info
+        return action, reward, done, False, {}
+    
+    def _get_step_reward(self, action):
+        # Convert action to tensor
+        action_tensor = th.tensor([[action]], dtype=th.long, device=self.device)
+        
+        with th.no_grad():
+            # Process the current token
+            logits, self.hidden_state = self.discriminator.forward_step(action_tensor, self.hidden_state)
+            current_prob = th.sigmoid(logits).item()
+            
+            if self.current_position == 0:
+                # For the first token, return its raw probability
+                reward = current_prob
+            else:
+                # For subsequent tokens, return the delta
+                reward = current_prob - self.previous_prob
+            
+            # Update previous probability for next step
+            self.previous_prob = current_prob
+            
+        return float(reward)
