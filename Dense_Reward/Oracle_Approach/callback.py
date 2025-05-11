@@ -94,11 +94,10 @@ class CustomCallback(BaseCallback):
             # Log to file after each rollout
             with open(self.log_path, 'a') as f:
                 # Header
-                if self.rollout_count == self.eval_freq:         
-                    f.write('rollout\tnll\td_loss\td_accuracy\treal_prob\tfake_prob\tavg_reward\tpolicy_loss\tvalue_loss\tentropy\n')
-                f.write(f'{self.rollout_count}\t{nll:.6f}\t{d_loss:.6f}\t{disc_metrics["accuracy"]:.6f}\t'
-                        f'{disc_metrics["real_prob"]:.6f}\t{disc_metrics["fake_prob"]:.6f}\t{avg_reward:.6f}\t'
-                        f'{policy_loss:.6f}\t{value_loss:.6f}\t{entropy:.6f}\n')
+                if self.rollout_count == self.eval_freq:   
+                    f.write('rollout\tnll\tpolicy_loss\tvalue_loss\tentropy\td_loss\td_accuracy\treal_prob\tfake_prob\tavg_reward\n')
+                f.write(f'{self.rollout_count}\t{nll:.6f}\t{policy_loss:.6f}\t{value_loss:.6f}\t{entropy:.6f}\t'
+                        f'{d_loss:.6f}\t{disc_metrics["accuracy"]:.6f}\t{disc_metrics["real_prob"]:.6f}\t{disc_metrics["fake_prob"]:.6f}\t{avg_reward:.6f}\n')
                 f.flush()
                     
     def _on_training_end(self):

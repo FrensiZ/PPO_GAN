@@ -22,7 +22,7 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 # Settings for hyperparameter search
 PARALLEL_CONFIG = {
     
-    'num_seeds': 4,
+    'num_seeds': 5,
     
     'param_grid': {
 
@@ -30,55 +30,53 @@ PARALLEL_CONFIG = {
         'g_hidden_dim': [256],
         
         # Evaluation
-        'eval_freq': [3],
+        'eval_freq': [2],
 
         # Pretraining Generator
         'g_pretrain_lr': [1e-2],
-        'g_pretrain_batch_size': [64],
-        'g_pretrain_epochs': [50],
+        'g_pretrain_batch_size': [128],
+        'g_pretrain_epochs': [100],
+        'g_eval_pretrain_epochs': [5],
 
         # Discriminator parameters
-        'd_outer_epochs': [15],
-        'd_inner_epochs': [2],
-        'd_batch_size': [128],
-        'd_learning_rate': [1e-5, 1e-6],
+        'd_learning_rate': [1e-6],
         
         'd_steps': [1],
-        'k_epochs': [1],
+        'k_epochs': [2],
 
         # # PPO parameters
-        'ppo_total_timesteps': [10*20 * 200],
-        'ppo_n_steps': [10*20, 20*20],
-        'ppo_batch_size': [5*20],
-        'ppo_n_epochs': [4, 8],
+        'ppo_total_timesteps': [20 * 8 * 50],
+        'ppo_n_steps': [20 * 8],
+        'ppo_batch_size': [20 * 4],
+        'ppo_n_epochs': [2],
 
         'use_linear_lr_decay': [False],
         'min_ppo_lr': [1e-5],
-        'ppo_learning_rate': [1e-3, 5e-4, 1e-4],
+
+        'ppo_learning_rate': [1e-4],
         
-        'ppo_gamma': [1.0],
-        'ppo_gae_lambda': [0.95],
-        'ppo_clip_range': [0.1, 0.2],
-        'ppo_ent_coef': [0.01, 0.0],
-        'ppo_vf_coef': [0.5, 0.75],
+        'ppo_gamma': [0.99, 0.999, 1.0],
+        'ppo_gae_lambda': [0.9, 0.95, 1.0],
+        'ppo_clip_range': [0.1, 0.2, 0.3],
+        'ppo_ent_coef': [0.0, 0.01, 0.5],
+        'ppo_vf_coef': [0.25, 0.5, 0.75],
         'ppo_clip_range_vf': [None],
         'ppo_max_grad_norm': [0.5],
         
         # Weight transfer
+        'do_pretrain': [False],
         'transfer_weights': [True],
-        'transfer_head': [True],
-        'do_pretrain': [True]
+        'transfer_head': [True]
     },
     'output_dir': RESULTS_DIR / "ppo_sparse_search",
 }
-
 def get_config_hash(config):
     """Generate a unique hash for a configuration."""
     return hashlib.md5(json.dumps(config, sort_keys=True).encode()).hexdigest()[:8]
 
 def get_free_gpus():
     """Find all free GPUs to use from the allowed GPUs."""
-    allowed_gpus = [0,1,2,3,4,5]  # Only use these GPUs
+    allowed_gpus = [0,3,4,5,6,7]  # Only use these GPUs
     try:
         result = subprocess.run(
             ['nvidia-smi', '--query-gpu=memory.used,memory.free,utilization.gpu', '--format=csv,nounits,noheader'], 
@@ -148,140 +146,140 @@ def run_training(config, gpu_id, seed, output_dir):
     
     return process
 
-def analyze_results(output_dir, configs, num_seeds):
-    """
-    Analyze results from all training runs.
+# def analyze_results(output_dir, configs, num_seeds):
+#     """
+#     Analyze results from all training runs.
     
-    Args:
-        output_dir: Base output directory
-        configs: List of configurations tested
-        num_seeds: Number of seeds used per configuration
-    """
-    print("\nAnalyzing results...")
+#     Args:
+#         output_dir: Base output directory
+#         configs: List of configurations tested
+#         num_seeds: Number of seeds used per configuration
+#     """
+#     print("\nAnalyzing results...")
     
-    # Collect results for all configurations and seeds
-    results = []
+#     # Collect results for all configurations and seeds
+#     results = []
     
-    for config_id, config in enumerate(configs):
-        config_hash = get_config_hash(config)
-        config_results = []
+#     for config_id, config in enumerate(configs):
+#         config_hash = get_config_hash(config)
+#         config_results = []
         
-        # Collect results for each seed
-        for seed in range(num_seeds):
-            seed_dir = output_dir / f"config_{config_id}_seed_{seed}"
-            results_path = seed_dir / "results.json"
+#         # Collect results for each seed
+#         for seed in range(num_seeds):
+#             seed_dir = output_dir / f"config_{config_id}_seed_{seed}"
+#             results_path = seed_dir / "results.json"
             
-            if results_path.exists():
-                try:
-                    with open(results_path, 'r') as f:
-                        seed_result = json.load(f)
+#             if results_path.exists():
+#                 try:
+#                     with open(results_path, 'r') as f:
+#                         seed_result = json.load(f)
                     
-                    config_results.append({
-                        'seed': seed,
-                        'nll': seed_result['final_metrics']['nll'],
-                        'discriminator': seed_result['final_metrics']['discriminator'],
-                        'training_time': seed_result['training_time']
-                    })
-                except Exception as e:
-                    print(f"Error reading results for config {config_id}, seed {seed}: {e}")
+#                     config_results.append({
+#                         'seed': seed,
+#                         'nll': seed_result['final_metrics']['nll'],
+#                         'discriminator': seed_result['final_metrics']['discriminator'],
+#                         'training_time': seed_result['training_time']
+#                     })
+#                 except Exception as e:
+#                     print(f"Error reading results for config {config_id}, seed {seed}: {e}")
         
-        # Skip if no results for this configuration
-        if not config_results:
-            continue
+#         # Skip if no results for this configuration
+#         if not config_results:
+#             continue
         
-        # Calculate average metrics
-        avg_nll = np.mean([r['nll'] for r in config_results])
-        std_nll = np.std([r['nll'] for r in config_results])
-        avg_real_prob = np.mean([r['discriminator']['real_prob'] for r in config_results])
-        avg_fake_prob = np.mean([r['discriminator']['fake_prob'] for r in config_results])
-        avg_disc_acc = np.mean([r['discriminator']['accuracy'] for r in config_results])
-        avg_time = np.mean([r['training_time'] for r in config_results])
+#         # Calculate average metrics
+#         avg_nll = np.mean([r['nll'] for r in config_results])
+#         std_nll = np.std([r['nll'] for r in config_results])
+#         avg_real_prob = np.mean([r['discriminator']['real_prob'] for r in config_results])
+#         avg_fake_prob = np.mean([r['discriminator']['fake_prob'] for r in config_results])
+#         avg_disc_acc = np.mean([r['discriminator']['accuracy'] for r in config_results])
+#         avg_time = np.mean([r['training_time'] for r in config_results])
         
-        # Calculate generator capability (lower NLL is better)
-        gen_capability = -avg_nll  # Negative so higher is better
+#         # Calculate generator capability (lower NLL is better)
+#         gen_capability = -avg_nll  # Negative so higher is better
         
-        results.append({
-            'config_id': config_id,
-            'config': config,
-            'hash': config_hash,
-            'avg_nll': float(avg_nll),
-            'std_nll': float(std_nll),
-            'avg_disc_acc': float(avg_disc_acc),
-            'avg_real_prob': float(avg_real_prob),
-            'avg_fake_prob': float(avg_fake_prob),
-            'gen_capability': float(gen_capability),
-            'avg_training_time': float(avg_time),
-            'seeds_completed': len(config_results)
-        })
+#         results.append({
+#             'config_id': config_id,
+#             'config': config,
+#             'hash': config_hash,
+#             'avg_nll': float(avg_nll),
+#             'std_nll': float(std_nll),
+#             'avg_disc_acc': float(avg_disc_acc),
+#             'avg_real_prob': float(avg_real_prob),
+#             'avg_fake_prob': float(avg_fake_prob),
+#             'gen_capability': float(gen_capability),
+#             'avg_training_time': float(avg_time),
+#             'seeds_completed': len(config_results)
+#         })
     
-    # Save all results
-    all_results_path = output_dir / "all_results.json"
-    with open(all_results_path, 'w') as f:
-        json.dump(results, f, indent=2)
+#     # Save all results
+#     all_results_path = output_dir / "all_results.json"
+#     with open(all_results_path, 'w') as f:
+#         json.dump(results, f, indent=2)
     
-    # Sort by generator capability (higher is better, which means lower NLL)
-    results.sort(key=lambda x: x['gen_capability'], reverse=True)
+#     # Sort by generator capability (higher is better, which means lower NLL)
+#     results.sort(key=lambda x: x['gen_capability'], reverse=True)
     
-    # Create top configs report
-    report_path = output_dir / "top_configs.txt"
-    with open(report_path, 'w') as f:
-        f.write("TOP PPO-SEQGAN CONFIGURATIONS\n")
-        f.write("=" * 40 + "\n\n")
+#     # Create top configs report
+#     report_path = output_dir / "top_configs.txt"
+#     with open(report_path, 'w') as f:
+#         f.write("TOP PPO-SEQGAN CONFIGURATIONS\n")
+#         f.write("=" * 40 + "\n\n")
         
-        for i, result in enumerate(results[:5]):
-            output = (
-                f"Rank {i+1}: (ID: {result['config_id']})\n"
-                f"  NLL: {result['avg_nll']:.4f} ± {result['std_nll']:.4f}\n"
-                f"  Discriminator Accuracy: {result['avg_disc_acc']:.4f}\n"
-                f"  Real Prob: {result['avg_real_prob']:.4f}, Fake Prob: {result['avg_fake_prob']:.4f}\n"
-                f"  Avg Training Time: {result['avg_training_time']:.1f} seconds\n"
-                f"  Seeds Completed: {result['seeds_completed']}/{num_seeds}\n"
-                f"  Configuration:\n"
-            )
+#         for i, result in enumerate(results[:5]):
+#             output = (
+#                 f"Rank {i+1}: (ID: {result['config_id']})\n"
+#                 f"  NLL: {result['avg_nll']:.4f} ± {result['std_nll']:.4f}\n"
+#                 f"  Discriminator Accuracy: {result['avg_disc_acc']:.4f}\n"
+#                 f"  Real Prob: {result['avg_real_prob']:.4f}, Fake Prob: {result['avg_fake_prob']:.4f}\n"
+#                 f"  Avg Training Time: {result['avg_training_time']:.1f} seconds\n"
+#                 f"  Seeds Completed: {result['seeds_completed']}/{num_seeds}\n"
+#                 f"  Configuration:\n"
+#             )
             
-            # Add configuration details with indentation
-            for k, v in result['config'].items():
-                output += f"    {k}: {v}\n"
+#             # Add configuration details with indentation
+#             for k, v in result['config'].items():
+#                 output += f"    {k}: {v}\n"
             
-            output += "\n" + "-" * 40 + "\n\n"
+#             output += "\n" + "-" * 40 + "\n\n"
             
-            f.write(output)
-            print(output)
+#             f.write(output)
+#             print(output)
     
-    # Create summary table for all configurations
-    table_path = output_dir / "all_configs_summary.txt"
-    with open(table_path, 'w') as f:
-        f.write("ALL PPO-SEQGAN CONFIGURATIONS SUMMARY\n")
-        f.write("=" * 80 + "\n\n")
+#     # Create summary table for all configurations
+#     table_path = output_dir / "all_configs_summary.txt"
+#     with open(table_path, 'w') as f:
+#         f.write("ALL PPO-SEQGAN CONFIGURATIONS SUMMARY\n")
+#         f.write("=" * 80 + "\n\n")
         
-        # Header
-        f.write(f"{'ID':>3} | {'NLL':>8} ± {'STD':>5} | {'DISC ACC':>8} | {'REAL P':>7} | {'FAKE P':>7} | {'TIME (s)':>9} | {'SEEDS':>5} | CONFIG\n")
-        f.write("-" * 100 + "\n")
+#         # Header
+#         f.write(f"{'ID':>3} | {'NLL':>8} ± {'STD':>5} | {'DISC ACC':>8} | {'REAL P':>7} | {'FAKE P':>7} | {'TIME (s)':>9} | {'SEEDS':>5} | CONFIG\n")
+#         f.write("-" * 100 + "\n")
         
-        # Data rows
-        for result in results:
-            config_str = " ".join([f"{k}={v}" for k, v in result['config'].items() 
-                                  if k in ['g_hidden_dim', 'ppo_learning_rate', 'ppo_ent_coef']])
-            f.write(f"{result['config_id']:3d} | {result['avg_nll']:8.4f} ± {result['std_nll']:5.4f} | "
-                    f"{result['avg_disc_acc']:8.4f} | {result['avg_real_prob']:7.4f} | "
-                    f"{result['avg_fake_prob']:7.4f} | {result['avg_training_time']:9.1f} | "
-                    f"{result['seeds_completed']:2d}/{num_seeds:2d} | {config_str:.60s}\n")
+#         # Data rows
+#         for result in results:
+#             config_str = " ".join([f"{k}={v}" for k, v in result['config'].items() 
+#                                   if k in ['g_hidden_dim', 'ppo_learning_rate', 'ppo_ent_coef']])
+#             f.write(f"{result['config_id']:3d} | {result['avg_nll']:8.4f} ± {result['std_nll']:5.4f} | "
+#                     f"{result['avg_disc_acc']:8.4f} | {result['avg_real_prob']:7.4f} | "
+#                     f"{result['avg_fake_prob']:7.4f} | {result['avg_training_time']:9.1f} | "
+#                     f"{result['seeds_completed']:2d}/{num_seeds:2d} | {config_str:.60s}\n")
     
-    # Find best configuration
-    if results:
-        best_result = results[0]
-        best_config_path = output_dir / "best_config.json"
-        with open(best_config_path, 'w') as f:
-            json.dump(best_result['config'], f, indent=2)
+#     # Find best configuration
+#     if results:
+#         best_result = results[0]
+#         best_config_path = output_dir / "best_config.json"
+#         with open(best_config_path, 'w') as f:
+#             json.dump(best_result['config'], f, indent=2)
         
-        print(f"\nBest configuration (ID: {best_result['config_id']}):")
-        print(f"  NLL: {best_result['avg_nll']:.4f} ± {best_result['std_nll']:.4f}")
-        print(f"  Configuration: {best_result['config']}")
-        print(f"\nBest configuration saved to {best_config_path}")
-    else:
-        print("\nNo valid results found!")
+#         print(f"\nBest configuration (ID: {best_result['config_id']}):")
+#         print(f"  NLL: {best_result['avg_nll']:.4f} ± {best_result['std_nll']:.4f}")
+#         print(f"  Configuration: {best_result['config']}")
+#         print(f"\nBest configuration saved to {best_config_path}")
+#     else:
+#         print("\nNo valid results found!")
     
-    print(f"Analysis complete. Reports saved to {output_dir}")
+#     print(f"Analysis complete. Reports saved to {output_dir}")
 
 def main():
     """Main function to run parallel training."""
@@ -388,8 +386,8 @@ def main():
     
     print("\nAll training runs completed!")
     
-    # Analyze results
-    analyze_results(output_dir, configs, PARALLEL_CONFIG['num_seeds'])
+    # # Analyze results
+    # analyze_results(output_dir, configs, PARALLEL_CONFIG['num_seeds'])
     
     print(f"All done! Results saved to {output_dir}")
 
