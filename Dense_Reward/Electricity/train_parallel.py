@@ -30,25 +30,25 @@ PARALLEL_CONFIG = {
         'g_hidden_dim': [256],
         
         # Evaluation
-        'eval_freq': [2],
+        'eval_freq': [1],
 
         # Pretraining Generator
-        'g_pretrain_lr': [1e-2],
+        'g_pretrain_lr': [5e-4],
         'g_pretrain_batch_size': [128],
-        'g_pretrain_epochs': [200],
+        'g_pretrain_epochs': [150],
         'g_eval_pretrain_epochs': [5],
 
         # Discriminator parameters
-        'd_learning_rate': [5e-6, 1e-6, 5e-7, 1e-7],
+        'd_learning_rate': [1e-6, 5e-7, 1e-7],
         
         # Number of batches for discriminator training per PPO rollout
-        'd_epochs': [10,20],
+        'd_epochs': [10],
 
-        # # PPO parameters
-        'ppo_total_timesteps': [300 * 8 * 50],
+        # PPO parameters
+        'ppo_total_timesteps': [300 * 8 * 20],
         'ppo_n_steps': [300 * 8],
         'ppo_batch_size': [300 * 4],
-        'ppo_n_epochs': [3,8],
+        'ppo_n_epochs': [5],
 
         'use_linear_lr_decay': [False],
         'min_ppo_lr': [1e-5],
@@ -59,11 +59,11 @@ PARALLEL_CONFIG = {
         'ppo_gae_lambda': [0.95],
         'ppo_clip_range': [0.1],
         'ppo_ent_coef': [0.001],
-        'ppo_vf_coef': [0.25, 0.5],
+        'ppo_vf_coef': [0.5],
         'ppo_clip_range_vf': [None],
         'ppo_max_grad_norm': [0.5],
         
-        'do_pretrain': [True],
+        'do_pretrain': [False],
         
         # Weight transfer
         'transfer_weights': [True],

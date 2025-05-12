@@ -43,12 +43,12 @@ G_LR_DECAY = 0.5
 DISCRIMINATOR_EMB_DIM = 64
 DISCRIMINATOR_HIDDEN_DIM = 128
 D_DROPOUT_RATE = 0.2
-D_PRETRAIN_EPOCHS = 15
+D_PRETRAIN_EPOCHS = 20
 D_BATCH_SIZE = 128
 D_LR_PATIENCE = 10
 D_LR_DECAY = 0.5
 D_LR_MIN = 1e-5
-D_PRETRAIN_LR = 5e-3
+D_PRETRAIN_LR = 1e-3
 
 def set_seed(seed):
     """Set random seed for reproducibility."""
@@ -331,7 +331,6 @@ def main():
     # If pretrained, transfer weights from generator to PPO model
     if config.get('transfer_weights', True):
         print("Transferring weights from pretrained generator to PPO policy...")
-        from generator import transfer_weights_from_saved
         ppo_model = transfer_weights_from_saved(
             weights_path=gen_weights_path,
             ppo_model=ppo_model,
