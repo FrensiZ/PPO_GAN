@@ -39,27 +39,28 @@ PARALLEL_CONFIG = {
         'g_eval_pretrain_epochs': [5],
 
         # Discriminator parameters
-        'd_learning_rate': [1e-6, 5e-7, 1e-7],
+        'd_learning_rate': [1e-7],
         
         # Number of batches for discriminator training per PPO rollout
         'd_epochs': [10],
 
         # PPO parameters
-        'ppo_total_timesteps': [300 * 8 * 5],
-        'ppo_n_steps': [300 * 8],
-        'ppo_batch_size': [300 * 4],
-        'ppo_n_epochs': [5],
+        'ppo_total_timesteps': [300 * 4 * 20],
+        #'ppo_total_timesteps': [300 * 4 * 10],
+        'ppo_n_steps': [300 * 1],
+        'ppo_batch_size': [300 // 2],
+        'ppo_n_epochs': [4],
 
         'use_linear_lr_decay': [False],
         'min_ppo_lr': [1e-5],
 
-        'ppo_learning_rate': [5e-4, 1e-4, 5e-5, 1e-5, 5e-6],
+        'ppo_learning_rate': [9e-6],
         
         'ppo_gamma': [0.999],
         'ppo_gae_lambda': [0.95],
-        'ppo_clip_range': [0.1],
+        'ppo_clip_range': [0.2],
         'ppo_ent_coef': [0.001],
-        'ppo_vf_coef': [0.5],
+        'ppo_vf_coef': [0.80],
         'ppo_clip_range_vf': [None],
         'ppo_max_grad_norm': [0.5],
         
