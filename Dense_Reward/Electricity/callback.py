@@ -9,7 +9,7 @@ class CustomCallback(BaseCallback):
     
     def __init__(self, discriminator, d_optimizer, 
                  d_epochs, d_batch_size,
-                 train_data, val_data, test_data, sequence_length, start_token,
+                 train_data, val_data, sequence_length, start_token,
                  eval_freq=1, verbose=0, log_path=None):
         
         super(CustomCallback, self).__init__(verbose)
@@ -23,17 +23,15 @@ class CustomCallback(BaseCallback):
         self.d_batch_size = d_batch_size
         self.eval_freq = eval_freq
         
-        # Data
+        # Data - keep only train and validation data
         self.train_data = th.tensor(train_data, dtype=th.long, device=discriminator.device)
         self.val_data = th.tensor(val_data, dtype=th.long, device=discriminator.device)
-        self.test_data = th.tensor(test_data, dtype=th.long, device=discriminator.device)
         self.num_train_samples = len(self.train_data)
         self.start_token = start_token
         self.sequence_length = sequence_length
         
-        # Calculate standard deviations for test data (for final evaluation)
+        # Calculate standard deviations for validation data only
         self.val_stds = th.std(self.val_data.float(), dim=0).cpu().numpy()
-        self.test_stds = th.std(self.test_data.float(), dim=0).cpu().numpy()
         
         # Initialize tracking metrics
         self.rollout_count = 0
@@ -44,7 +42,7 @@ class CustomCallback(BaseCallback):
         self.log_path = log_path if log_path else '0_ppo_adversarial_training.txt'
 
         with open(self.log_path, 'w') as f:
-            f.write('rollout\twass\twass_norm\tkl_divergence\tpolicy_loss\tvalue_loss\tentropy\td_loss\td_accuracy\treal_prob\tfake_prob\tavg_reward\n')
+            f.write('rollout\tval_wass\tval_wass_norm\tval_kl\tpolicy_loss\tvalue_loss\tentropy\td_loss\td_accuracy\treal_prob\tfake_prob\tavg_reward\n')
         
     def _on_training_start(self):
         """Called at the start of training"""
@@ -53,7 +51,7 @@ class CustomCallback(BaseCallback):
     def _on_rollout_start(self):
         """Called at the start of a rollout"""
         pass
-    
+
     def _on_rollout_end(self):
         """Called at the end of a rollout - this is where we'll train the discriminator"""
 
@@ -66,14 +64,12 @@ class CustomCallback(BaseCallback):
         if self.rollout_count % self.eval_freq == 0:
             # Generate validation-sized sample set for evaluation
             val_samples = self._generate_samples(len(self.val_data))
-            
-            # Calculate distribution metrics on validation data
-            # Get both raw and normalized Wasserstein distances
-            wasserstein_raw, wasserstein_norm, kl = self._calculate_metrics(
+
+            # Calculate metrics on validation data
+            val_wasserstein_raw, val_wasserstein_norm, val_kl = self._calculate_metrics(
                 self.val_data.cpu().numpy(), 
-                val_samples.cpu().numpy(),
-                self.val_stds
-            )
+                val_samples.cpu().numpy()
+                )
             
             # Get discriminator evaluation metrics
             disc_metrics = self._evaluate_discriminator(val_samples)
@@ -88,44 +84,29 @@ class CustomCallback(BaseCallback):
 
             # Log to file after each evaluation
             with open(self.log_path, 'a') as f:
-                f.write(f'{self.rollout_count}\t{wasserstein_raw:.6f}\t{wasserstein_norm:.6f}\t{kl:.6f}\t{policy_loss:.6f}\t{value_loss:.6f}\t{entropy:.6f}\t'
+                f.write(f'{self.rollout_count}\t{val_wasserstein_raw:.6f}\t{val_wasserstein_norm:.6f}\t'
+                        f'{val_kl:.6f}\t{policy_loss:.6f}\t{value_loss:.6f}\t{entropy:.6f}\t'
                         f'{d_loss:.6f}\t{disc_metrics["accuracy"]:.6f}\t{disc_metrics["real_prob"]:.6f}\t{disc_metrics["fake_prob"]:.6f}\t{avg_reward:.6f}\n')
                 f.flush()
             
-            # Save model if metrics improve (based on validation data)
-            if wasserstein_norm < self.best_wasserstein:
-                self.best_wasserstein = wasserstein_norm
+            # Save model if metrics improve (based on validation data only)
+            if val_wasserstein_norm < self.best_wasserstein:
+                self.best_wasserstein = val_wasserstein_norm
                 self.model.save(self.log_path.replace('.txt', '_best_wasserstein'))
-                print(f"New best model saved with normalized Wasserstein distance: {wasserstein_norm:.6f}")
+                print(f"New best model saved with normalized Wasserstein distance: {val_wasserstein_norm:.6f}")
             
-            if kl < self.best_kl:
-                self.best_kl = kl
-                print(f"New best KL divergence: {kl:.6f}")
-                    
+            if val_kl < self.best_kl:
+                self.best_kl = val_kl
+                print(f"New best KL divergence: {val_kl:.6f}")
+
     def _on_training_end(self):
-        """Called at the end of training"""
-        # Generate test-sized sample for final evaluation 
-        test_samples = self._generate_samples(len(self.test_data))
-        
-        # Calculate final metrics on test data (normalized for final evaluation)
-        wasserstein_raw, wasserstein_norm, kl = self._calculate_metrics(
-            self.test_data.cpu().numpy(), 
-            test_samples.cpu().numpy(),
-            self.test_stds
-            )
-        
-        # Save detailed metrics by timestep (using test data)
-        self._save_detailed_metrics(test_samples.cpu().numpy())
+        """Called at the end of training - just log the best validation performance"""
         
         # Log final performance
         with open(self.log_path, 'a') as f:
-            f.write(f"\nFinal Test Performance:\n")
-            f.write(f"Normalized Wasserstein Distance: {wasserstein_norm:.6f}\n")
-            f.write(f"KL Divergence: {kl:.6f}\n")
+            f.write(f"\nBest Model Validation Performance:\n")
             f.write(f"Best Validation Wasserstein (normalized): {self.best_wasserstein:.6f}\n")
             f.write(f"Best Validation KL: {self.best_kl:.6f}\n")
-        
-        print(f"Training complete. Final normalized test metrics: Wasserstein={wasserstein_norm:.6f}, KL={kl:.6f}")
 
     def _on_step(self) -> bool:
         if self.n_calls % 100 == 0:
@@ -142,7 +123,7 @@ class CustomCallback(BaseCallback):
         return True
 
     def _generate_samples(self, num_samples):
-        
+        """Generate samples using the current model."""
         self.model.policy.set_training_mode(False)
 
         obs = np.array([self.start_token] * num_samples)
@@ -228,7 +209,7 @@ class CustomCallback(BaseCallback):
 
         return metrics
     
-    def _calculate_metrics(self, real_data, generated_data, stds):
+    def _calculate_metrics(self, real_data, generated_data):
         """Calculate both raw and normalized Wasserstein distances plus KL divergence."""
         
         raw_wasserstein_distances = []
@@ -245,8 +226,8 @@ class CustomCallback(BaseCallback):
             w_dist = wasserstein_distance(real_t, gen_t)
             raw_wasserstein_distances.append(w_dist)
             
-            # Calculate normalized Wasserstein distance using provided stds
-            real_std = stds[t]
+            # Calculate normalized Wasserstein distance using the internal val_stds
+            real_std = self.val_stds[t]
             norm_w_dist = w_dist / real_std if real_std > 0 else float('inf')
             norm_wasserstein_distances.append(norm_w_dist)
             
@@ -272,48 +253,6 @@ class CustomCallback(BaseCallback):
         
         # Return average metrics
         return np.mean(raw_wasserstein_distances), np.mean(norm_wasserstein_distances), np.mean(kl_divergences)
-    
-    def _save_detailed_metrics(self, generated_data):
-        """Save detailed metrics for each timestep."""
-        
-        real_data = self.test_data.cpu().numpy()
-        metrics_path = self.log_path.replace('.txt', '_final_metrics.txt')
-        
-        with open(metrics_path, 'w') as f:
-            # Update the header to include both raw and normalized Wasserstein
-            f.write("timestep\twasserstein_raw\twasserstein_normalized\tkl_divergence\n")
-            
-            for t in range(self.sequence_length):
-                # Calculate metrics for this timestep
-                real_t = real_data[:, t]
-                gen_t = generated_data[:, t]
-                
-                # Calculate raw Wasserstein
-                w_dist = wasserstein_distance(real_t, gen_t)
-                
-                # Calculate normalized Wasserstein using test stds
-                real_std = self.test_stds[t]
-                norm_w_dist = w_dist / real_std if real_std > 0 else float('inf')
-                
-                # Calculate KL (same as before)
-                vocab_size = self.discriminator.vocab_size
-                bins = np.arange(0, vocab_size + 1) - 0.5
-                
-                real_hist, _ = np.histogram(real_t, bins=bins, density=True)
-                gen_hist, _ = np.histogram(gen_t, bins=bins, density=True)
-                
-                # Smooth and normalize
-                epsilon = 1e-10
-                real_hist = real_hist + epsilon
-                gen_hist = gen_hist + epsilon
-                
-                real_hist = real_hist / real_hist.sum()
-                gen_hist = gen_hist / gen_hist.sum()
-                
-                kl = np.sum(kl_div(real_hist, gen_hist))
-                
-                # Update the output line to include both raw and normalized values
-                f.write(f"{t}\t{w_dist:.6f}\t{norm_w_dist:.6f}\t{kl:.6f}\n")
     
     def _calculate_average_reward(self):
         """Calculate average reward per episode from the rollout buffer."""

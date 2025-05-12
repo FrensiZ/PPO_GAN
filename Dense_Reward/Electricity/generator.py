@@ -320,3 +320,85 @@ def transfer_weights_from_saved(weights_path, ppo_model, transfer_head, vocab_si
     
     return ppo_model
 
+def generate_ppo_samples(model, start_token, sequence_length, num_samples, device):
+    """Generate sequence samples using the model."""
+    model.policy.set_training_mode(False)
+
+    obs = np.array([start_token] * num_samples)
+    lstm_states = None
+    episode_starts = np.ones((num_samples,), dtype=bool)
+    
+    # Initialize sequences
+    sequences = [[] for _ in range(num_samples)]
+
+    # Generate full sequence_length tokens
+    for _ in range(sequence_length):
+        actions, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_starts, deterministic=False)
+        for i, action in enumerate(actions):
+            sequences[i].append(int(action))
+        obs = actions
+        episode_starts = np.zeros((num_samples,), dtype=bool)
+    
+    # Convert to numpy array
+    return np.array(sequences)
+
+def calculate_ppo_metrics(real_data, generated_data, stds, vocab_size):
+    """Calculate raw and normalized Wasserstein distances."""
+    
+    raw_wasserstein_distances = []
+    norm_wasserstein_distances = []
+    per_timestep_metrics = []  # Store both metrics for each timestep
+    
+    sequence_length = real_data.shape[1]
+    
+    # Calculate metrics for each timestep
+    for t in range(sequence_length):
+        # Get data for this timestep
+        real_t = real_data[:, t]
+        gen_t = generated_data[:, t]
+        
+        # Calculate raw Wasserstein distance
+        w_dist = wasserstein_distance(real_t, gen_t)
+        raw_wasserstein_distances.append(w_dist)
+        
+        # Calculate normalized Wasserstein distance
+        real_std = stds[t]
+        norm_w_dist = w_dist / real_std if real_std > 0 else float('inf')
+        norm_wasserstein_distances.append(norm_w_dist)
+        
+        # Store both metrics for this timestep
+        per_timestep_metrics.append((w_dist, norm_w_dist))
+    
+    # Return average metrics and per-timestep metrics
+    return {
+        'wasserstein_raw': float(np.mean(raw_wasserstein_distances)),
+        'wasserstein_norm': float(np.mean(norm_wasserstein_distances))
+    }, per_timestep_metrics
+
+def evaluate_best_model(model, output_path, test_data, vocab_size, sequence_length, start_token, device):
+    """Evaluate the provided model on test data."""
+    
+    print(f"Evaluating model...")
+    
+    # Convert test data to tensor and calculate standard deviations
+    test_tensor = th.tensor(test_data, dtype=th.float32)
+    test_stds = th.std(test_tensor, dim=0).cpu().numpy()
+    
+    # Generate samples using the model
+    test_samples = generate_ppo_samples(model, start_token, sequence_length, len(test_data), device)
+    
+    # Calculate metrics
+    metrics, per_timestep_metrics = calculate_ppo_metrics(test_data, test_samples, test_stds, vocab_size)
+    
+    # Write per-timestep metrics to file
+    metrics_path = output_path.replace('.txt', '_final_metrics.txt')
+    with open(metrics_path, 'w') as f:
+        f.write("timestep\twasserstein_raw\twasserstein_normalized\n")
+        for t, (raw, norm) in enumerate(per_timestep_metrics):
+            f.write(f"{t}\t{raw:.6f}\t{norm:.6f}\n")
+    
+    print(f"Model metrics: Raw Wasserstein={metrics['wasserstein_raw']:.6f}, " 
+          f"Normalized={metrics['wasserstein_norm']:.6f}")
+    print(f"Per-timestep metrics saved to {metrics_path}")
+    
+    return metrics

@@ -11,9 +11,11 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.utils import get_linear_fn
 from sb3_contrib.ppo_recurrent import RecurrentPPO
+from scipy.stats import wasserstein_distance
+from scipy.special import kl_div
 
 # Import local modules
-from generator import Generator, pretrain_generator, transfer_weights_from_saved
+from generator import Generator, pretrain_generator, transfer_weights_from_saved, generate_ppo_samples, calculate_ppo_metrics, evaluate_best_model
 from discriminator import Discriminator, pretrain_discriminator
 from environment import TokenGenerationEnv
 from callback import CustomCallback
@@ -279,7 +281,6 @@ def main():
         d_batch_size=D_BATCH_SIZE,
         train_data=train_data,
         val_data=val_data,
-        test_data=test_data,
         sequence_length=SEQ_LENGTH,
         start_token=START_TOKEN,
         eval_freq=config['eval_freq'],
@@ -351,6 +352,24 @@ def main():
         callback=callback
     )
     
+    # Close environment
+    env.close()
+
+    print("Loading best model from training...")
+    best_model_path = ppo_log.replace('.txt', '_best_wasserstein')
+    best_model = RecurrentPPO.load(best_model_path, env=None)
+
+    # Evaluate the best model
+    best_model_metrics = evaluate_best_model(
+        model=best_model,
+        output_path=ppo_log,
+        test_data=test_data,
+        vocab_size=VOCAB_SIZE,
+        sequence_length=SEQ_LENGTH,
+        start_token=START_TOKEN,
+        device=device
+        )
+
     # Record training time
     training_time = time.time() - start_time
     
@@ -361,7 +380,9 @@ def main():
     # Create results summary
     results = {
         "config": config_with_seed,
-        "training_time": training_time
+        "training_time": training_time,
+        'best_model_metrics': best_model_metrics
+
     }
     
     # Save results
@@ -371,8 +392,6 @@ def main():
     
     print(f"Training completed in {training_time:.2f} seconds!")
     
-    # Close environment
-    env.close()
 
 if __name__ == "__main__":
     main()
