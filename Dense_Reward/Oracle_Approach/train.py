@@ -360,8 +360,8 @@ def main():
         policy_kwargs=dict(
             lstm_hidden_size=config['g_hidden_dim'],
             n_lstm_layers=G_NUM_LAYERS,
-            shared_lstm=False,
-            enable_critic_lstm=True,
+            shared_lstm=True,
+            enable_critic_lstm=False,
             net_arch=dict(pi=[], vf=[]),
             optimizer_class=th.optim.Adam,
             optimizer_kwargs=dict(

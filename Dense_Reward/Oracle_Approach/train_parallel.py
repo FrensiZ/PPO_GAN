@@ -39,26 +39,26 @@ PARALLEL_CONFIG = {
         'g_eval_pretrain_epochs': [5],
 
         # Discriminator parameters
-        'd_learning_rate': [1e-6],
+        'd_learning_rate': [5e-6, 1e-6, 5e-7],
         
         'd_steps': [1],
-        'k_epochs': [2],
+        'k_epochs': [1,2],
 
         # # PPO parameters
         'ppo_total_timesteps': [20 * 8 * 50],
-        'ppo_n_steps': [20 * 8],
+        'ppo_n_steps': [20*8],
         'ppo_batch_size': [20 * 4],
-        'ppo_n_epochs': [2],
+        'ppo_n_epochs': [3, 6],
 
         'use_linear_lr_decay': [False],
         'min_ppo_lr': [1e-5],
 
-        'ppo_learning_rate': [1e-4],
+        'ppo_learning_rate': [1e-3, 5e-4, 1e-4, 5e-5],
         
-        'ppo_gamma': [0.99, 0.999, 1.0],
-        'ppo_gae_lambda': [0.9, 0.95, 1.0],
-        'ppo_clip_range': [0.1, 0.2, 0.3],
-        'ppo_ent_coef': [0.0, 0.01, 0.5],
+        'ppo_gamma': [0.99],
+        'ppo_gae_lambda': [0.95],
+        'ppo_clip_range': [0.2],
+        'ppo_ent_coef': [0.0, 0.01],
         'ppo_vf_coef': [0.25, 0.5, 0.75],
         'ppo_clip_range_vf': [None],
         'ppo_max_grad_norm': [0.5],
@@ -68,7 +68,7 @@ PARALLEL_CONFIG = {
         'transfer_weights': [True],
         'transfer_head': [True]
     },
-    'output_dir': RESULTS_DIR / "ppo_sparse_search",
+    'output_dir': RESULTS_DIR / "densePPO_results",
 }
 def get_config_hash(config):
     """Generate a unique hash for a configuration."""

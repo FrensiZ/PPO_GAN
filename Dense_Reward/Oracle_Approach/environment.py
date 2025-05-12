@@ -19,17 +19,16 @@ class TokenGenerationEnv(gym.Env):
         
         self.current_position = None
         self.hidden_state = None
-        self.previous_prob = None
-
-        self.previous_loss = None
         
-    
+        self.previous_prob = None
+        self.previous_loss = None
+         
     def reset(self, seed=None, options=None):
         
         self.current_position = 0
         self.hidden_state = None
+        
         self.previous_prob = None
-
         self.previous_loss = None
         
         return int(self.start_token), {}
@@ -54,19 +53,40 @@ class TokenGenerationEnv(gym.Env):
         with th.no_grad():
             # Process the current token
             logits, self.hidden_state = self.discriminator.forward_step(action_tensor, self.hidden_state)
-            current_prob = th.sigmoid(logits).item()
             
-            if self.current_position == 0:
-                # For the first token, return its raw probability
-                reward = current_prob
-            else:
-                # For subsequent tokens, return the delta
-                reward = current_prob - self.previous_prob
+            # Create a "real" target (we want the generator to produce tokens that the discriminator thinks are real)
+            target_real = th.ones_like(logits, device=self.device)
             
-            # Update previous probability for next step
-            self.previous_prob = current_prob
+            # Calculate raw BCE loss
+            # Note: We use the negative of BCE because lower BCE means better performance
+            # and we want higher rewards for better performance
+            raw_bce_loss = -F.binary_cross_entropy_with_logits(logits, target_real).item()
             
+            # Return the raw BCE as reward
+            reward = raw_bce_loss
+                
         return float(reward)
+
+    # def _get_step_reward(self, action):
+    #     # Convert action to tensor
+    #     action_tensor = th.tensor([[action]], dtype=th.long, device=self.device)
+        
+    #     with th.no_grad():
+    #         # Process the current token
+    #         logits, self.hidden_state = self.discriminator.forward_step(action_tensor, self.hidden_state)
+    #         current_prob = th.sigmoid(logits).item()
+            
+    #         if self.current_position == 0:
+    #             # For the first token, return its raw probability
+    #             reward = current_prob
+    #         else:
+    #             # For subsequent tokens, return the delta
+    #             reward = current_prob - self.previous_prob
+            
+    #         # Update previous probability for next step
+    #         self.previous_prob = current_prob
+            
+    #     return float(reward)
     
     # def _get_step_reward(self, action):
     #     # Convert action to tensor
