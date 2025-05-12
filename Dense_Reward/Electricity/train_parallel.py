@@ -12,7 +12,7 @@ import pickle
 # ============= BASE DIRECTORIES =============
 BASE_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
 SAVE_DIR = BASE_DIR / "saved_models"
-RESULTS_DIR = BASE_DIR / "results"
+RESULTS_DIR = BASE_DIR / "results_electricity"
 
 # Create directories if they don't exist
 os.makedirs(SAVE_DIR, exist_ok=True)
@@ -22,7 +22,7 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 # Settings for hyperparameter search
 PARALLEL_CONFIG = {
     
-    'num_seeds': 6,
+    'num_seeds': 30,
     
     'param_grid': {
 
@@ -45,8 +45,8 @@ PARALLEL_CONFIG = {
         'd_epochs': [10],
 
         # PPO parameters
-        'ppo_total_timesteps': [300 * 4 * 20],
-        #'ppo_total_timesteps': [300 * 4 * 10],
+        #'ppo_total_timesteps': [300 * 1],
+        'ppo_total_timesteps': [300 * 40],
         'ppo_n_steps': [300 * 1],
         'ppo_batch_size': [300 // 2],
         'ppo_n_epochs': [4],
@@ -56,7 +56,7 @@ PARALLEL_CONFIG = {
 
         'ppo_learning_rate': [9e-6],
         
-        'ppo_gamma': [0.999],
+        'ppo_gamma': [1.0],
         'ppo_gae_lambda': [0.95],
         'ppo_clip_range': [0.2],
         'ppo_ent_coef': [0.001],
@@ -70,7 +70,7 @@ PARALLEL_CONFIG = {
         'transfer_weights': [True],
         'transfer_head': [True]
     },
-    'output_dir': RESULTS_DIR / "elctricity_results",
+    'output_dir': RESULTS_DIR,
 }
 
 
@@ -254,9 +254,6 @@ def main():
         time.sleep(4)
     
     print("\nAll training runs completed!")
-    
-    # # Analyze results
-    # analyze_results(output_dir, configs, PARALLEL_CONFIG['num_seeds'])
     
     print(f"All done! Results saved to {output_dir}")
 

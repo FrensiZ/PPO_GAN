@@ -393,9 +393,9 @@ def evaluate_best_model(model, output_path, test_data, vocab_size, sequence_leng
     # Write per-timestep metrics to file
     metrics_path = output_path.replace('.txt', '_final_metrics.txt')
     with open(metrics_path, 'w') as f:
-        f.write("timestep\twasserstein_raw\twasserstein_normalized\n")
+        f.write("timestep\tnormalized_wasserstein\n")
         for t, (raw, norm) in enumerate(per_timestep_metrics):
-            f.write(f"{t}\t{raw:.6f}\t{norm:.6f}\n")
+            f.write(f"{t}\t{norm:.6f}\n")
     
     print(f"Model metrics: Raw Wasserstein={metrics['wasserstein_raw']:.6f}, " 
           f"Normalized={metrics['wasserstein_norm']:.6f}")

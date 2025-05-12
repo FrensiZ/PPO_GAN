@@ -90,7 +90,7 @@ class CustomCallback(BaseCallback):
                 f.flush()
             
             # Save model if metrics improve (based on validation data only)
-            if val_wasserstein_norm < self.best_wasserstein:
+            if val_wasserstein_norm < self.best_wasserstein and self.rollout_count > 1:
                 self.best_wasserstein = val_wasserstein_norm
                 self.model.save(self.log_path.replace('.txt', '_best_wasserstein'))
                 print(f"New best model saved with normalized Wasserstein distance: {val_wasserstein_norm:.6f}")
