@@ -32,6 +32,7 @@ class CustomCallback(BaseCallback):
         self.sequence_length = sequence_length
         
         # Calculate standard deviations for test data (for final evaluation)
+        self.val_stds = th.std(self.val_data.float(), dim=0).cpu().numpy()
         self.test_stds = th.std(self.test_data.float(), dim=0).cpu().numpy()
         
         # Initialize tracking metrics
@@ -70,7 +71,8 @@ class CustomCallback(BaseCallback):
             # Get both raw and normalized Wasserstein distances
             wasserstein_raw, wasserstein_norm, kl = self._calculate_metrics(
                 self.val_data.cpu().numpy(), 
-                val_samples.cpu().numpy()
+                val_samples.cpu().numpy(),
+                self.val_stds
             )
             
             # Get discriminator evaluation metrics
@@ -106,8 +108,11 @@ class CustomCallback(BaseCallback):
         test_samples = self._generate_samples(len(self.test_data))
         
         # Calculate final metrics on test data (normalized for final evaluation)
-        wasserstein_raw, wasserstein_norm, kl = self._calculate_metrics(self.test_data.cpu().numpy(), 
-                                                 test_samples.cpu().numpy())
+        wasserstein_raw, wasserstein_norm, kl = self._calculate_metrics(
+            self.test_data.cpu().numpy(), 
+            test_samples.cpu().numpy(),
+            self.test_stds
+            )
         
         # Save detailed metrics by timestep (using test data)
         self._save_detailed_metrics(test_samples.cpu().numpy())
@@ -117,7 +122,7 @@ class CustomCallback(BaseCallback):
             f.write(f"\nFinal Test Performance:\n")
             f.write(f"Normalized Wasserstein Distance: {wasserstein_norm:.6f}\n")
             f.write(f"KL Divergence: {kl:.6f}\n")
-            f.write(f"Best Validation Wasserstein (unnormalized): {self.best_wasserstein:.6f}\n")
+            f.write(f"Best Validation Wasserstein (normalized): {self.best_wasserstein:.6f}\n")
             f.write(f"Best Validation KL: {self.best_kl:.6f}\n")
         
         print(f"Training complete. Final normalized test metrics: Wasserstein={wasserstein_norm:.6f}, KL={kl:.6f}")
@@ -223,7 +228,7 @@ class CustomCallback(BaseCallback):
 
         return metrics
     
-    def _calculate_metrics(self, real_data, generated_data):
+    def _calculate_metrics(self, real_data, generated_data, stds):
         """Calculate both raw and normalized Wasserstein distances plus KL divergence."""
         
         raw_wasserstein_distances = []
@@ -240,8 +245,8 @@ class CustomCallback(BaseCallback):
             w_dist = wasserstein_distance(real_t, gen_t)
             raw_wasserstein_distances.append(w_dist)
             
-            # Calculate normalized Wasserstein distance
-            real_std = self.test_stds[t]
+            # Calculate normalized Wasserstein distance using provided stds
+            real_std = stds[t]
             norm_w_dist = w_dist / real_std if real_std > 0 else float('inf')
             norm_wasserstein_distances.append(norm_w_dist)
             
@@ -275,6 +280,7 @@ class CustomCallback(BaseCallback):
         metrics_path = self.log_path.replace('.txt', '_final_metrics.txt')
         
         with open(metrics_path, 'w') as f:
+            # Update the header to include both raw and normalized Wasserstein
             f.write("timestep\twasserstein_raw\twasserstein_normalized\tkl_divergence\n")
             
             for t in range(self.sequence_length):
@@ -282,12 +288,14 @@ class CustomCallback(BaseCallback):
                 real_t = real_data[:, t]
                 gen_t = generated_data[:, t]
                 
-                # Calculate and normalize Wasserstein
+                # Calculate raw Wasserstein
                 w_dist = wasserstein_distance(real_t, gen_t)
+                
+                # Calculate normalized Wasserstein using test stds
                 real_std = self.test_stds[t]
                 norm_w_dist = w_dist / real_std if real_std > 0 else float('inf')
                 
-                # Calculate KL
+                # Calculate KL (same as before)
                 vocab_size = self.discriminator.vocab_size
                 bins = np.arange(0, vocab_size + 1) - 0.5
                 
@@ -304,7 +312,7 @@ class CustomCallback(BaseCallback):
                 
                 kl = np.sum(kl_div(real_hist, gen_hist))
                 
-                # Write to file
+                # Update the output line to include both raw and normalized values
                 f.write(f"{t}\t{w_dist:.6f}\t{norm_w_dist:.6f}\t{kl:.6f}\n")
     
     def _calculate_average_reward(self):
