@@ -38,6 +38,7 @@ class CustomCallback(BaseCallback):
         # Initialize tracking metrics
         self.rollout_count = 0
         self.best_wasserstein = float('inf')
+        self.initial_kl = float('inf')
         self.best_kl = float('inf')
         
         # Log path
@@ -105,16 +106,18 @@ class CustomCallback(BaseCallback):
                         f'{d_loss:.6f}\t{disc_metrics["accuracy"]:.6f}\t{disc_metrics["real_prob"]:.6f}\t{disc_metrics["fake_prob"]:.6f}\t{avg_reward:.6f}\n')
                 f.flush()
             
-            # Save model if metrics improve (based on validation data only)
-            if val_wasserstein_norm < self.best_wasserstein and self.rollout_count > 1:
-                self.best_wasserstein = val_wasserstein_norm
-                ### NEW
-                self.model.save(str(self.model_path))
-                print(f"New best model saved with normalized Wasserstein distance: {val_wasserstein_norm:.6f}")
+            if self.rollout_count == 1:
+                # Set initial KL value after first evaluation
+                self.initial_kl = val_kl
+                print(f"Initial KL divergence: {self.initial_kl:.6f}")
             
-            if val_kl < self.best_kl:
-                self.best_kl = val_kl
-                print(f"New best KL divergence: {val_kl:.6f}")
+            # Save model if Wasserstein improves AND KL is below threshold
+            if val_wasserstein_norm < self.best_wasserstein and val_kl < self.initial_kl and self.rollout_count > 1:
+                self.best_wasserstein = val_wasserstein_norm
+                self.best_kl = val_kl  # Track best KL that meets criteria
+                
+                self.model.save(str(self.model_path))
+                print(f"New best model saved with Wasserstein: {val_wasserstein_norm:.6f}, KL: {val_kl:.6f}")
 
     def _on_training_end(self):
         """Called at the end of training - just log the best validation performance"""
