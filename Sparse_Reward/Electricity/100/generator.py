@@ -256,7 +256,6 @@ def pretrain_generator(generator, optimizer, pre_epoch_num, batch_size,
     print(f'Pretraining finished! Final metrics: Wasserstein={avg_wasserstein:.6f}, KL={avg_kl:.6f}')
     return best_model_path
 
-
 def transfer_weights_from_saved(weights_path, ppo_model, transfer_head, vocab_size, hidden_dim, sequence_length, start_token, num_layers, device):
 
     # Create temporary supervised model to load weights into
@@ -351,11 +350,12 @@ def generate_ppo_samples(model, start_token, sequence_length, num_samples, devic
     return np.array(sequences)
 
 def calculate_ppo_metrics(real_data, generated_data, stds, vocab_size):
-    """Calculate raw and normalized Wasserstein distances."""
+    """Calculate raw and normalized Wasserstein distances and KL divergence."""
     
     raw_wasserstein_distances = []
     norm_wasserstein_distances = []
-    per_timestep_metrics = []  # Store both metrics for each timestep
+    kl_divergences = []
+    per_timestep_metrics = []  # Store all metrics for each timestep
     
     sequence_length = real_data.shape[1]
     
@@ -374,13 +374,33 @@ def calculate_ppo_metrics(real_data, generated_data, stds, vocab_size):
         norm_w_dist = w_dist / real_std if real_std > 0 else float('inf')
         norm_wasserstein_distances.append(norm_w_dist)
         
-        # Store both metrics for this timestep
-        per_timestep_metrics.append((w_dist, norm_w_dist))
+        # Calculate KL divergence
+        bins = np.arange(0, vocab_size + 1) - 0.5  # Create bins for each token value
+        
+        real_hist, _ = np.histogram(real_t, bins=bins, density=True)
+        gen_hist, _ = np.histogram(gen_t, bins=bins, density=True)
+        
+        # Smooth probabilities to avoid division by zero
+        epsilon = 1e-10
+        real_hist = real_hist + epsilon
+        gen_hist = gen_hist + epsilon
+        
+        # Normalize to ensure they sum to 1
+        real_hist = real_hist / real_hist.sum()
+        gen_hist = gen_hist / gen_hist.sum()
+        
+        # Calculate KL divergence
+        kl = np.sum(kl_div(real_hist, gen_hist))
+        kl_divergences.append(kl)
+        
+        # Store all metrics for this timestep
+        per_timestep_metrics.append((w_dist, norm_w_dist, kl))
     
     # Return average metrics and per-timestep metrics
     return {
         'wasserstein_raw': float(np.mean(raw_wasserstein_distances)),
-        'wasserstein_norm': float(np.mean(norm_wasserstein_distances))
+        'wasserstein_norm': float(np.mean(norm_wasserstein_distances)),
+        'kl_divergence': float(np.mean(kl_divergences))
     }, per_timestep_metrics
 
 def evaluate_best_model(model, output_path, test_data, vocab_size, sequence_length, start_token, device):
@@ -399,25 +419,77 @@ def evaluate_best_model(model, output_path, test_data, vocab_size, sequence_leng
     metrics, per_timestep_metrics = calculate_ppo_metrics(test_data, test_samples, test_stds, vocab_size)
     
     # Extract seed from output_path
-    seed_str = Path(output_path).stem.split('_')[0]  # Extract seed
+    if "config_" in str(output_path):
+        # Format: config_{config_id}_seed_{seed}_adversarial_train.txt
+        parts = Path(output_path).stem.split('_')
+        config_id = parts[1]
+        seed_str = parts[3]
+        prefix = f"config_{config_id}_seed_{seed_str}_"
+    else:
+        # Format: {seed}_adversarial_train.txt
+        seed_str = Path(output_path).stem.split('_')[0]
+        prefix = f"{seed_str}_"
     
     # Save the generated samples to the models directory
     models_dir = Path(os.getenv('MODELS_DIR', './saved_models_training'))
-    samples_path = str(models_dir / f"{seed_str}_inference_samples.npy")
+    samples_path = str(models_dir / f"{prefix}inference_samples.npy")
     np.save(samples_path, test_samples)
     print(f"Generated samples saved to {samples_path}")
     
     # Write per-timestep metrics to metrics directory
     metrics_dir = Path(os.getenv('METRICS_DIR', './saved_metrics_training'))
-    metrics_path = str(metrics_dir / f"{seed_str}_inference_adversarial.txt")
-    with open(metrics_path, 'w') as f:
-        f.write("timestep\tnormalized_wasserstein\n")
-        for t, (raw, norm) in enumerate(per_timestep_metrics):
-            f.write(f"{t}\t{norm:.6f}\n")
+    metrics_path = str(metrics_dir / f"{prefix}inference_metrics.txt")
     
+    # Write all metrics including KL divergence
+    with open(metrics_path, 'w') as f:
+        f.write("timestep\traw_wasserstein\tnormalized_wasserstein\tkl_divergence\n")
+        for t, (raw, norm, kl) in enumerate(per_timestep_metrics):
+            f.write(f"{t}\t{raw:.6f}\t{norm:.6f}\t{kl:.6f}\n")
+    
+    # Print summary metrics
     print(f"Model metrics: Raw Wasserstein={metrics['wasserstein_raw']:.6f}, " 
-          f"Normalized={metrics['wasserstein_norm']:.6f}")
+          f"Normalized={metrics['wasserstein_norm']:.6f}, "
+          f"KL Divergence={metrics['kl_divergence']:.6f}")
     print(f"Per-timestep metrics saved to {metrics_path}")
     
     return metrics
+
+# def evaluate_best_model(model, output_path, test_data, vocab_size, sequence_length, start_token, device):
+#     """Evaluate the provided model on test data."""
+    
+#     print(f"Evaluating model...")
+    
+#     # Convert test data to tensor and calculate standard deviations
+#     test_tensor = th.tensor(test_data, dtype=th.float32)
+#     test_stds = th.std(test_tensor, dim=0).cpu().numpy()
+    
+#     # Generate samples using the model
+#     test_samples = generate_ppo_samples(model, start_token, sequence_length, len(test_data), device)
+    
+#     # Calculate metrics
+#     metrics, per_timestep_metrics = calculate_ppo_metrics(test_data, test_samples, test_stds, vocab_size)
+    
+#     # Extract seed from output_path
+#     seed_str = Path(output_path).stem.split('_')[0]  # Extract seed
+    
+#     # Save the generated samples to the models directory
+#     models_dir = Path(os.getenv('MODELS_DIR', './saved_models_training'))
+#     samples_path = str(models_dir / f"{seed_str}_inference_samples.npy")
+#     np.save(samples_path, test_samples)
+#     print(f"Generated samples saved to {samples_path}")
+    
+#     # Write per-timestep metrics to metrics directory
+#     metrics_dir = Path(os.getenv('METRICS_DIR', './saved_metrics_training'))
+#     metrics_path = str(metrics_dir / f"{seed_str}_inference_adversarial.txt")
+
+#     with open(metrics_path, 'w') as f:
+#         f.write("timestep\tnormalized_wasserstein\n")
+#         for t, (raw, norm) in enumerate(per_timestep_metrics):
+#             f.write(f"{t}\t{norm:.6f}\n")
+    
+#     print(f"Model metrics: Raw Wasserstein={metrics['wasserstein_raw']:.6f}, " 
+#           f"Normalized={metrics['wasserstein_norm']:.6f}")
+#     print(f"Per-timestep metrics saved to {metrics_path}")
+    
+#     return metrics
 

@@ -57,10 +57,7 @@ PARALLEL_CONFIG = {
         'use_linear_lr_decay': [False],
         'min_ppo_lr': [1e-5],
 
-        'ppo_learning_rate': [
-            3e-5, 2e-5, 1e-5,
-            9e-6, 8e-6, 7e-6, 6e-6, 5e-6, 4e-6, 3e-6, 2e-6, 1e-6
-            ],
+        'ppo_learning_rate': [2e-6],
         
         'ppo_gamma': [1.0],
         'ppo_gae_lambda': [0.95],
@@ -71,7 +68,7 @@ PARALLEL_CONFIG = {
         'ppo_max_grad_norm': [0.5],
         
         'do_pretrain': [False],
-        'do_hyperparam_search': [True],
+        'do_hyperparam_search': [False],
         
         # Weight transfer
         'transfer_weights': [True],

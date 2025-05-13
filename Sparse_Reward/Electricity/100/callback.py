@@ -119,6 +119,7 @@ class CustomCallback(BaseCallback):
                 self.model.save(str(self.model_path))
                 print(f"New best model saved with Wasserstein: {val_wasserstein_norm:.6f}, KL: {val_kl:.6f}")
 
+
     def _on_training_end(self):
         """Called at the end of training - just log the best validation performance"""
         
