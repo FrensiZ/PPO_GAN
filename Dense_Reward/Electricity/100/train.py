@@ -34,10 +34,17 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 os.makedirs(METRICS_DIR, exist_ok=True)
 os.makedirs(MODELS_DIR, exist_ok=True)
 
+# ============= FIXED PARAMETERS ============= #
+# VOCABULARY SIZE   ==============
+# SEQUENCE LENGTH   ==============
+# DATA FILESET      ==============
+# ============= FIXED PARAMETERS ============= #
+
+
 # ============= FIXED PARAMETERS =============
 # Data parameters
-VOCAB_SIZE = 800  # From data_processing.py
-SEQ_LENGTH = 300   # From data_processing.py
+VOCAB_SIZE = 500  
+SEQ_LENGTH = 100  
 START_TOKEN = 0
 
 # GENERATOR
@@ -49,7 +56,7 @@ G_LR_DECAY = 0.5
 DISCRIMINATOR_EMB_DIM = 64
 DISCRIMINATOR_HIDDEN_DIM = 128
 D_DROPOUT_RATE = 0.2
-D_PRETRAIN_EPOCHS = 20
+D_PRETRAIN_EPOCHS = 25
 D_BATCH_SIZE = 128
 D_LR_PATIENCE = 10
 D_LR_DECAY = 0.5
@@ -71,9 +78,9 @@ def load_data():
     """Load and return electricity sequence data."""
     print("Loading electricity sequence data...")
     
-    train_data = np.load(DATA_DIR / 'train_electricity_300.npy')
-    val_data = np.load(DATA_DIR / 'val_electricity_300.npy')
-    test_data = np.load(DATA_DIR / 'test_electricity_300.npy')
+    train_data = np.load(DATA_DIR / 'train_electricity_100_500.npy')
+    val_data = np.load(DATA_DIR / 'val_electricity_100_500.npy')
+    test_data = np.load(DATA_DIR / 'test_electricity_100_500.npy')
     
     print(f"Loaded data:")
     print(f"  Train: {train_data.shape}")

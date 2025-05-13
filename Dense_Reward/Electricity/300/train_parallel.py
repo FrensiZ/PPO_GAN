@@ -26,7 +26,7 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 # Settings for hyperparameter search
 PARALLEL_CONFIG = {
     
-    'num_seeds': 6,
+    'num_seeds': 120,
     
     'param_grid': {
 
@@ -67,7 +67,7 @@ PARALLEL_CONFIG = {
         'ppo_clip_range_vf': [None],
         'ppo_max_grad_norm': [0.5],
         
-        'do_pretrain': [False],
+        'do_pretrain': [True],
         
         # Weight transfer
         'transfer_weights': [True],

@@ -26,7 +26,7 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 # Settings for hyperparameter search
 PARALLEL_CONFIG = {
     
-    'num_seeds': 120,
+    'num_seeds': 30,
     
     'param_grid': {
 
@@ -39,7 +39,7 @@ PARALLEL_CONFIG = {
         # Pretraining Generator
         'g_pretrain_lr': [5e-4],
         'g_pretrain_batch_size': [128],
-        'g_pretrain_epochs': [150],
+        'g_pretrain_epochs': [200],
         'g_eval_pretrain_epochs': [5],
 
         # Discriminator parameters
@@ -49,9 +49,10 @@ PARALLEL_CONFIG = {
         'd_epochs': [10],
 
         # PPO parameters
-        'ppo_total_timesteps': [300 * 40],
-        'ppo_n_steps': [300 * 1],
-        'ppo_batch_size': [300 // 2],
+        'ppo_total_timesteps': [100 * 3],
+        #'ppo_total_timesteps': [300 * 40],
+        'ppo_n_steps': [100 * 1],
+        'ppo_batch_size': [100 // 2],
         'ppo_n_epochs': [4],
 
         'use_linear_lr_decay': [False],
