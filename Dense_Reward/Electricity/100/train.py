@@ -360,6 +360,19 @@ def main():
             device=device
         )
 
+    print("Loading best model from training...")
+    if config.get('do_hyperparam_search', False):
+        config_id = os.getenv('CONFIG_ID', '0')
+        best_model_path = os.path.join(MODELS_DIR, f"config_{config_id}_seed_{seed}_best_wasserstein")
+        initial_model_path = os.path.join(MODELS_DIR, f"config_{config_id}_seed_{seed}_initial_model")
+    else:
+        best_model_path = os.path.join(MODELS_DIR, f"{seed}_best_wasserstein")
+        initial_model_path = os.path.join(MODELS_DIR, f"{seed}_initial_model")
+
+    # Save initial model right after creation (before training)
+    ppo_model.save(initial_model_path)
+    print(f"Saved initial model to {initial_model_path}")
+
     
     # Train with PPO
     print("Starting PPO training...")
@@ -371,15 +384,15 @@ def main():
     # Close environment
     env.close()
 
-    print("Loading best model from training...")
-    if config.get('do_hyperparam_search', False):
-        config_id = os.getenv('CONFIG_ID', '0')
-        best_model_path = os.path.join(MODELS_DIR, f"config_{config_id}_seed_{seed}_best_wasserstein")
+    print("Loading best model for evaluation...")
+    # Check if the best model exists, otherwise use the initial model
+    if os.path.exists(best_model_path + ".zip"):
+        print(f"Loading best model from {best_model_path}")
+        best_model = RecurrentPPO.load(best_model_path, env=None)
     else:
-        best_model_path = os.path.join(MODELS_DIR, f"{seed}_best_wasserstein")
-    
-    best_model = RecurrentPPO.load(best_model_path, env=None)
-    
+        print(f"No best model found, loading initial model from {initial_model_path}")
+        best_model = RecurrentPPO.load(initial_model_path, env=None)
+
     # Evaluate the best model
     best_model_metrics = evaluate_best_model(
         model=best_model,
