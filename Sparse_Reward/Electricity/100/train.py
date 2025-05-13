@@ -45,7 +45,7 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 # Data parameters
 VOCAB_SIZE = 500  
 SEQ_LENGTH = 100
-START_TOKEN = 0
+START_TOKEN = VOCAB_SIZE//2
 
 # GENERATOR
 G_NUM_LAYERS = 2

@@ -67,7 +67,7 @@ PARALLEL_CONFIG = {
         'ppo_clip_range_vf': [None],
         'ppo_max_grad_norm': [0.5],
         
-        'do_pretrain': [False],
+        'do_pretrain': [True],
         'do_hyperparam_search': [False],
         
         # Weight transfer

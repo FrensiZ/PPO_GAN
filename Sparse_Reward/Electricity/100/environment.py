@@ -5,13 +5,13 @@ import torch.nn.functional as F
 
 class TokenGenerationEnv(gym.Env):
 
-    def __init__(self, discriminator, vocab_size, seq_length, start_token, device):
+    def __init__(self, discriminator, vocab_size, seq_length, start_token_distribution, device):
         super(TokenGenerationEnv, self).__init__()
         
         self.discriminator = discriminator
         self.vocab_size = vocab_size
         self.seq_length = seq_length
-        self.start_token = start_token
+        self.start_token_distribution = start_token_distribution
         self.device = device
         
         self.action_space = spaces.Discrete(vocab_size)
@@ -21,11 +21,13 @@ class TokenGenerationEnv(gym.Env):
         self.current_position = None
     
     def reset(self, seed=None, options=None):
+
+        start_token = np.random.choice(self.vocab_size, p=self.start_token_distribution)
         
         self.current_sequence = []
         self.current_position = 0
         
-        return int(self.start_token), {}
+        return int(start_token), {}
 
     def step(self, action):
         
