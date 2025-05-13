@@ -398,11 +398,18 @@ def evaluate_best_model(model, output_path, test_data, vocab_size, sequence_leng
     # Calculate metrics
     metrics, per_timestep_metrics = calculate_ppo_metrics(test_data, test_samples, test_stds, vocab_size)
     
-    # Write per-timestep metrics to file
+    # Extract seed from output_path
     seed_str = Path(output_path).stem.split('_')[0]  # Extract seed
+    
+    # Save the generated samples to the models directory
+    models_dir = Path(os.getenv('MODELS_DIR', './saved_models_training'))
+    samples_path = str(models_dir / f"{seed_str}_inference_samples.npy")
+    np.save(samples_path, test_samples)
+    print(f"Generated samples saved to {samples_path}")
+    
+    # Write per-timestep metrics to metrics directory
     metrics_dir = Path(os.getenv('METRICS_DIR', './saved_metrics_training'))
-    metrics_path = str(metrics_dir / f"{seed_str}_inference_adversial.txt")
-    #metrics_path = output_path.replace('.txt', '_final_metrics.txt')
+    metrics_path = str(metrics_dir / f"{seed_str}_inference_adversarial.txt")
     with open(metrics_path, 'w') as f:
         f.write("timestep\tnormalized_wasserstein\n")
         for t, (raw, norm) in enumerate(per_timestep_metrics):
@@ -413,3 +420,4 @@ def evaluate_best_model(model, output_path, test_data, vocab_size, sequence_leng
     print(f"Per-timestep metrics saved to {metrics_path}")
     
     return metrics
+
