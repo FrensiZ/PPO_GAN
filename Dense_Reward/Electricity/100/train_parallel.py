@@ -49,16 +49,21 @@ PARALLEL_CONFIG = {
         'd_epochs': [10],
 
         # PPO parameters
-        'ppo_total_timesteps': [100 * 3],
-        #'ppo_total_timesteps': [300 * 40],
-        'ppo_n_steps': [100 * 1],
-        'ppo_batch_size': [100 // 2],
+        'ppo_total_timesteps': [100 * 80],
+        'ppo_n_steps': [100 * 2],
+        'ppo_batch_size': [100 * 1],
         'ppo_n_epochs': [4],
 
         'use_linear_lr_decay': [False],
         'min_ppo_lr': [1e-5],
 
-        'ppo_learning_rate': [9e-6],
+        'ppo_learning_rate': [
+            1e-3, 9e-4, 8e-4, 7e-4, 6e-4, 5e-4, 4e-4, 3e-4, 2e-4, 1e-4,
+            9e-5, 8e-5, 7e-5, 6e-5, 5e-5, 4e-5, 3e-5, 2e-5, 1e-5,
+            9e-6, 8e-6, 7e-6, 6e-6, 5e-6, 4e-6, 3e-6, 2e-6, 1e-6
+            ],
+
+        #'ppo_learning_rate': [9e-6],
         
         'ppo_gamma': [1.0],
         'ppo_gae_lambda': [0.95],
