@@ -1,0 +1,27 @@
+Discriminator pre-training...
+epoch:	0	train_loss:	0.5926	val_loss:	0.5282	accuracy:	0.7813	real_prob	0.6319	fake_prob	0.3116
+epoch:	1	train_loss:	0.5766	val_loss:	0.5686	accuracy:	0.7221	real_prob	0.6552	fake_prob	0.3952
+epoch:	2	train_loss:	0.5403	val_loss:	0.4645	accuracy:	0.8032	real_prob	0.6344	fake_prob	0.2242
+epoch:	3	train_loss:	0.4422	val_loss:	0.4126	accuracy:	0.8660	real_prob	0.7604	fake_prob	0.2017
+epoch:	4	train_loss:	0.4156	val_loss:	0.4003	accuracy:	0.8691	real_prob	0.7272	fake_prob	0.1770
+epoch:	5	train_loss:	0.4055	val_loss:	0.4016	accuracy:	0.8696	real_prob	0.7615	fake_prob	0.2141
+epoch:	6	train_loss:	0.3960	val_loss:	0.3927	accuracy:	0.8661	real_prob	0.7014	fake_prob	0.1457
+epoch:	7	train_loss:	0.3889	val_loss:	0.3964	accuracy:	0.8745	real_prob	0.7342	fake_prob	0.1933
+epoch:	8	train_loss:	0.3845	val_loss:	0.3898	accuracy:	0.8724	real_prob	0.7109	fake_prob	0.1603
+epoch:	9	train_loss:	0.3780	val_loss:	0.3926	accuracy:	0.8687	real_prob	0.7411	fake_prob	0.1700
+epoch:	10	train_loss:	0.3697	val_loss:	0.3910	accuracy:	0.8745	real_prob	0.7297	fake_prob	0.1575
+epoch:	11	train_loss:	0.3587	val_loss:	0.3938	accuracy:	0.8810	real_prob	0.7545	fake_prob	0.1566
+epoch:	12	train_loss:	0.3483	val_loss:	0.4012	accuracy:	0.8767	real_prob	0.7470	fake_prob	0.1485
+epoch:	13	train_loss:	0.3433	val_loss:	0.4155	accuracy:	0.8718	real_prob	0.7139	fake_prob	0.1161
+epoch:	14	train_loss:	0.3285	val_loss:	0.4462	accuracy:	0.8760	real_prob	0.7298	fake_prob	0.1200
+epoch:	15	train_loss:	0.3188	val_loss:	0.4255	accuracy:	0.8693	real_prob	0.7591	fake_prob	0.1389
+epoch:	16	train_loss:	0.3088	val_loss:	0.4840	accuracy:	0.8727	real_prob	0.7127	fake_prob	0.0975
+epoch:	17	train_loss:	0.3027	val_loss:	0.4595	accuracy:	0.8717	real_prob	0.6980	fake_prob	0.1037
+epoch:	18	train_loss:	0.2998	val_loss:	0.4656	accuracy:	0.8714	real_prob	0.7257	fake_prob	0.1136
+Learning rate reduced to 0.0005
+epoch:	19	train_loss:	0.2834	val_loss:	0.5336	accuracy:	0.8724	real_prob	0.7100	fake_prob	0.0915
+epoch:	20	train_loss:	0.2710	val_loss:	0.5818	accuracy:	0.8655	real_prob	0.7124	fake_prob	0.0883
+epoch:	21	train_loss:	0.2708	val_loss:	0.5617	accuracy:	0.8718	real_prob	0.7106	fake_prob	0.0848
+epoch:	22	train_loss:	0.2622	val_loss:	0.6227	accuracy:	0.8610	real_prob	0.6769	fake_prob	0.0735
+epoch:	23	train_loss:	0.2595	val_loss:	0.6557	accuracy:	0.8652	real_prob	0.6864	fake_prob	0.0663
+epoch:	24	train_loss:	0.2529	val_loss:	0.6151	accuracy:	0.8663	real_prob	0.7040	fake_prob	0.0804
