@@ -57,7 +57,10 @@ PARALLEL_CONFIG = {
         'use_linear_lr_decay': [False],
         'min_ppo_lr': [1e-5],
 
-        'ppo_learning_rate': [9e-6],
+        'ppo_learning_rate': [
+            5e-5, 4e-5, 3e-5, 2e-5, 1e-5,
+            9e-6, 8e-6, 7e-6, 6e-6, 5e-6
+            ],
         
         'ppo_gamma': [1.0],
         'ppo_gae_lambda': [0.95],
