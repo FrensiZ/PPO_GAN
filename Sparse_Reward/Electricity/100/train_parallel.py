@@ -58,8 +58,8 @@ PARALLEL_CONFIG = {
         'min_ppo_lr': [1e-5],
 
         'ppo_learning_rate': [
-            5e-5, 4e-5, 3e-5, 2e-5, 1e-5,
-            9e-6, 8e-6, 7e-6, 6e-6, 5e-6
+            3e-5, 2e-5, 1e-5,
+            9e-6, 8e-6, 7e-6, 6e-6, 5e-6, 4e-6, 3e-6, 2e-6, 1e-6
             ],
         
         'ppo_gamma': [1.0],
