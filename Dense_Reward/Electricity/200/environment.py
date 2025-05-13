@@ -1,3 +1,4 @@
+import numpy as np
 import torch as th
 import gymnasium as gym
 from gymnasium import spaces

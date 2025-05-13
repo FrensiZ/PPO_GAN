@@ -39,7 +39,7 @@ PARALLEL_CONFIG = {
         # Pretraining Generator
         'g_pretrain_lr': [5e-4],
         'g_pretrain_batch_size': [128],
-        'g_pretrain_epochs': [150],
+        'g_pretrain_epochs': [100],
         'g_eval_pretrain_epochs': [5],
 
         # Discriminator parameters
