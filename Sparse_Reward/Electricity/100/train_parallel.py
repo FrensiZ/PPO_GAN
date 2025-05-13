@@ -49,19 +49,20 @@ PARALLEL_CONFIG = {
         'd_epochs': [10],
 
         # PPO parameters
-        'ppo_total_timesteps': [100 * 160],
-        'ppo_n_steps': [100 * 4],
-        'ppo_batch_size': [100 * 2],
+        'ppo_total_timesteps': [100 * 80],
+        'ppo_n_steps': [100 * 2],
+        'ppo_batch_size': [100 * 1],
         'ppo_n_epochs': [4],
 
         'use_linear_lr_decay': [False],
         'min_ppo_lr': [1e-5],
-        
+
         'ppo_learning_rate': [
             1e-3, 9e-4, 8e-4, 7e-4, 6e-4, 5e-4, 4e-4, 3e-4, 2e-4, 1e-4,
             9e-5, 8e-5, 7e-5, 6e-5, 5e-5, 4e-5, 3e-5, 2e-5, 1e-5,
             9e-6, 8e-6, 7e-6, 6e-6, 5e-6, 4e-6, 3e-6, 2e-6, 1e-6
             ],
+
         #'ppo_learning_rate': [9e-6],
         
         'ppo_gamma': [1.0],
@@ -72,7 +73,8 @@ PARALLEL_CONFIG = {
         'ppo_clip_range_vf': [None],
         'ppo_max_grad_norm': [0.5],
         
-        'do_pretrain': [True],
+        'do_pretrain': [False],
+        'do_hyperparam_search': [True],
         
         # Weight transfer
         'transfer_weights': [True],
@@ -117,7 +119,7 @@ def generate_configs(param_grid):
     values = param_grid.values()
     return [dict(zip(keys, v)) for v in itertools.product(*values)]    
 
-def run_training(config, gpu_id, seed, output_dir):
+def run_training(config, gpu_id, seed, output_dir, config_id):
     """
     Run a single training job as a subprocess.
     
@@ -144,6 +146,7 @@ def run_training(config, gpu_id, seed, output_dir):
         "CONFIG_PATH": str(config_path),
         "OUTPUT_DIR": str(output_dir),
         "SEED": str(seed),
+        "CONFIG_ID": str(config_id),  # Add this line
         "WORKING_DIR": str(BASE_DIR),
         "METRICS_DIR": str(BASE_DIR / "saved_metrics_training"),
         "MODELS_DIR": str(BASE_DIR / "saved_models_training")     
@@ -204,7 +207,7 @@ def main():
                         # Start the training process
                         try:
                             print(f"Starting config {config_id}, seed {seed} on GPU {gpu_id}")
-                            process = run_training(config, gpu_id, seed, run_dir)
+                            process = run_training(config, gpu_id, seed, run_dir, config_id) 
                             
                             # Track the process
                             active_processes[run_key] = {

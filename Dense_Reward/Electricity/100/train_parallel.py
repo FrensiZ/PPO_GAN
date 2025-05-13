@@ -26,7 +26,7 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 # Settings for hyperparameter search
 PARALLEL_CONFIG = {
     
-    'num_seeds': 30,
+    'num_seeds': 6,
     
     'param_grid': {
 
@@ -73,7 +73,8 @@ PARALLEL_CONFIG = {
         'ppo_clip_range_vf': [None],
         'ppo_max_grad_norm': [0.5],
         
-        'do_pretrain': [True],
+        'do_pretrain': [False],
+        'do_hyperparam_search': [True],
         
         # Weight transfer
         'transfer_weights': [True],
@@ -118,7 +119,7 @@ def generate_configs(param_grid):
     values = param_grid.values()
     return [dict(zip(keys, v)) for v in itertools.product(*values)]    
 
-def run_training(config, gpu_id, seed, output_dir):
+def run_training(config, gpu_id, seed, output_dir, config_id):
     """
     Run a single training job as a subprocess.
     
@@ -145,6 +146,7 @@ def run_training(config, gpu_id, seed, output_dir):
         "CONFIG_PATH": str(config_path),
         "OUTPUT_DIR": str(output_dir),
         "SEED": str(seed),
+        "CONFIG_ID": str(config_id),  # Add this line
         "WORKING_DIR": str(BASE_DIR),
         "METRICS_DIR": str(BASE_DIR / "saved_metrics_training"),
         "MODELS_DIR": str(BASE_DIR / "saved_models_training")     
@@ -205,7 +207,7 @@ def main():
                         # Start the training process
                         try:
                             print(f"Starting config {config_id}, seed {seed} on GPU {gpu_id}")
-                            process = run_training(config, gpu_id, seed, run_dir)
+                            process = run_training(config, gpu_id, seed, run_dir, config_id) 
                             
                             # Track the process
                             active_processes[run_key] = {

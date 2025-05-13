@@ -44,7 +44,7 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 # ============= FIXED PARAMETERS =============
 # Data parameters
 VOCAB_SIZE = 500  
-SEQ_LENGTH = 100  
+SEQ_LENGTH = 100
 START_TOKEN = 0
 
 # GENERATOR
@@ -125,10 +125,15 @@ def main():
     # Start timing
     start_time = time.time()
     
-    # Create log file paths
-    gen_pretrain_log = os.path.join(METRICS_DIR, f"{seed}_generator_pretrain.txt")
-    disc_pretrain_log = os.path.join(METRICS_DIR, f"{seed}_discriminator_pretrain.txt")
-    ppo_log = os.path.join(METRICS_DIR, f"{seed}_adversarial_train.txt")
+    if config.get('do_hyperparam_search', False):
+        config_id = os.getenv('CONFIG_ID', '0')
+        gen_pretrain_log = os.path.join(METRICS_DIR, f"config_{config_id}_seed_{seed}_generator_pretrain.txt")
+        disc_pretrain_log = os.path.join(METRICS_DIR, f"config_{config_id}_seed_{seed}_discriminator_pretrain.txt")
+        ppo_log = os.path.join(METRICS_DIR, f"config_{config_id}_seed_{seed}_adversarial_train.txt")
+    else:
+        gen_pretrain_log = os.path.join(METRICS_DIR, f"{seed}_generator_pretrain.txt")
+        disc_pretrain_log = os.path.join(METRICS_DIR, f"{seed}_discriminator_pretrain.txt")
+        ppo_log = os.path.join(METRICS_DIR, f"{seed}_adversarial_train.txt")
     
     # Print training configuration
     print(f"Training DSGAN with:")
@@ -232,8 +237,8 @@ def main():
             
             # Determine paths based on seed
             seed_prefix = f"{seed}_"
-            gen_weights_path = os.path.join(SAVE_DIR, f"{seed_prefix}generator_pretrained.pth")
-            disc_load_path = os.path.join(SAVE_DIR, f"{seed_prefix}discriminator_pretrained.pth")
+            gen_weights_path = os.path.join(SAVE_DIR, f"{seed_prefix}generator_best_model.pth")
+            disc_load_path = os.path.join(SAVE_DIR, f"{seed_prefix}discriminator_best_model.pth")
             
             print(f"Using generator weights from: {gen_weights_path}")
             print(f"Loading discriminator from: {disc_load_path}")
@@ -367,8 +372,12 @@ def main():
     env.close()
 
     print("Loading best model from training...")
-    best_model_path = os.path.join(MODELS_DIR, f"{seed}_best_wasserstein")
-    #best_model_path = ppo_log.replace('.txt', '_best_wasserstein')
+    if config.get('do_hyperparam_search', False):
+        config_id = os.getenv('CONFIG_ID', '0')
+        best_model_path = os.path.join(MODELS_DIR, f"config_{config_id}_seed_{seed}_best_wasserstein")
+    else:
+        best_model_path = os.path.join(MODELS_DIR, f"{seed}_best_wasserstein")
+    
     best_model = RecurrentPPO.load(best_model_path, env=None)
     
     # Evaluate the best model

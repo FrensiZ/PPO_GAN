@@ -44,8 +44,17 @@ class CustomCallback(BaseCallback):
         self.log_path = log_path if log_path else '0_ppo_adversarial_training.txt'
 
         ### NEW
-        seed_str = Path(self.log_path).stem.split('_')[0]  # Extract seed from log path
-        self.model_path = Path(os.getenv('MODELS_DIR', './saved_models_training')) / f"{seed_str}_best_wasserstein"
+        # Check if path contains "config_" pattern and extract seed accordingly
+        if "config_" in str(self.log_path):
+            # Format: config_{config_id}_seed_{seed}_adversarial_train.txt
+            parts = Path(self.log_path).stem.split('_')
+            config_id = parts[1]
+            seed_str = parts[3]
+            self.model_path = Path(os.getenv('MODELS_DIR', './saved_models_training')) / f"config_{config_id}_seed_{seed_str}_best_wasserstein"
+        else:
+            # Format: {seed}_adversarial_train.txt
+            seed_str = Path(self.log_path).stem.split('_')[0]
+            self.model_path = Path(os.getenv('MODELS_DIR', './saved_models_training')) / f"{seed_str}_best_wasserstein"
         ### NEW
 
         with open(self.log_path, 'w') as f:
@@ -101,7 +110,6 @@ class CustomCallback(BaseCallback):
                 self.best_wasserstein = val_wasserstein_norm
                 ### NEW
                 self.model.save(str(self.model_path))
-                #self.model.save(self.log_path.replace('.txt', '_best_wasserstein'))
                 print(f"New best model saved with normalized Wasserstein distance: {val_wasserstein_norm:.6f}")
             
             if val_kl < self.best_kl:
