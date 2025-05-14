@@ -12,7 +12,7 @@ import pickle
 # ============= BASE DIRECTORIES =============
 BASE_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
 SAVE_DIR = BASE_DIR / "saved_models"
-RESULTS_DIR = BASE_DIR / "results_electricity"
+RESULTS_DIR = BASE_DIR / "results_vwap"
 METRICS_DIR = BASE_DIR / "saved_metrics_training"
 MODELS_DIR = BASE_DIR / "saved_models_training"
 

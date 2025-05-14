@@ -262,7 +262,7 @@ def pretrain_generator(generator, optimizer, pre_epoch_num, batch_size,
     log.write(f"Final average KL divergence: {avg_kl:.6f}\n")
 
     ## Save generated samples
-    samples_path = str(Path(log_path).parent / f"{seed_str}_pretrain_inference_samples.npy")
+    samples_path = str(Path(log_path).parent / f"{seed_str}_inference_pretrain.npy")
     np.save(samples_path, generated_np)
     print(f"Generated samples from pretraining saved to {samples_path}")
     
@@ -453,13 +453,13 @@ def evaluate_best_model(model, output_path, test_data, vocab_size, inference_seq
     
     # Save the generated samples to the models directory
     models_dir = Path(os.getenv('MODELS_DIR', './saved_models_training'))
-    samples_path = str(models_dir / f"{prefix}inference_samples.npy")
+    samples_path = str(models_dir / f"{prefix}inference_adversial.npy")
     np.save(samples_path, test_samples)
     print(f"Generated samples saved to {samples_path}")
     
     # Write per-timestep metrics to metrics directory
     metrics_dir = Path(os.getenv('METRICS_DIR', './saved_metrics_training'))
-    metrics_path = str(metrics_dir / f"{prefix}inference_metrics.txt")
+    metrics_path = str(metrics_dir / f"{prefix}inference_adversial.txt")
     
     # Write all metrics including KL divergence
     with open(metrics_path, 'w') as f:
