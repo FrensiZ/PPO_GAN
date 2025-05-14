@@ -26,7 +26,7 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 # Settings for hyperparameter search
 PARALLEL_CONFIG = {
     
-    'num_seeds': 30,
+    'num_seeds': 10,
     
     'param_grid': {
 
@@ -39,7 +39,7 @@ PARALLEL_CONFIG = {
         # Pretraining Generator
         'g_pretrain_lr': [5e-4],
         'g_pretrain_batch_size': [128],
-        'g_pretrain_epochs': [50],
+        'g_pretrain_epochs': [100],
         'g_eval_pretrain_epochs': [5],
 
         # Discriminator parameters
@@ -51,8 +51,8 @@ PARALLEL_CONFIG = {
         'd_epochs': [10],
 
         # PPO parameters
-        'ppo_total_timesteps': [75 * 4],
-        #'ppo_total_timesteps': [75 * 80],
+        #'ppo_total_timesteps': [75 * 4],
+        'ppo_total_timesteps': [75 * 80],
         'ppo_n_steps': [75 * 2],
         'ppo_batch_size': [75 * 1],
         'ppo_n_epochs': [2],
@@ -60,18 +60,18 @@ PARALLEL_CONFIG = {
         'use_linear_lr_decay': [False],
         'min_ppo_lr': [1e-5],
 
-        'ppo_learning_rate': [2e-6],
+        'ppo_learning_rate': [1e-5, 9e-6, 8e-6, 7e-6, 6e-6, 5e-6, 4e-6, 3e-6, 2e-6, 1e-6],
         
-        'ppo_gamma': [0.9999],
+        'ppo_gamma': [0.999],
         'ppo_gae_lambda': [0.95],
-        'ppo_clip_range': [0.05],
-        'ppo_ent_coef': [0.0],
+        'ppo_clip_range': [0.1],
+        'ppo_ent_coef': [0.001],
         'ppo_vf_coef': [0.75],
         'ppo_clip_range_vf': [None],
         'ppo_max_grad_norm': [0.5],
         
-        'do_pretrain': [True],
-        'do_hyperparam_search': [False],
+        'do_pretrain': [False],
+        'do_hyperparam_search': [True],
         
         # Weight transfer
         'transfer_weights': [True],
