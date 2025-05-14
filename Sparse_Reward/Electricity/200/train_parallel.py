@@ -26,7 +26,7 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 # Settings for hyperparameter search
 PARALLEL_CONFIG = {
     
-    'num_seeds': 6,
+    'num_seeds': 30,
     
     'param_grid': {
 
@@ -49,26 +49,25 @@ PARALLEL_CONFIG = {
         'd_epochs': [10],
 
         # PPO parameters
-        'ppo_total_timesteps': [100 * 3],
-        #'ppo_total_timesteps': [100 * 100],
+        'ppo_total_timesteps': [100 * 60],
         'ppo_n_steps': [100 * 2],
-        'ppo_batch_size': [100 * 1],
-        'ppo_n_epochs': [4],
+        'ppo_batch_size': [100 // 2],
+        'ppo_n_epochs': [2],
 
         'use_linear_lr_decay': [False],
         'min_ppo_lr': [1e-5],
 
-        'ppo_learning_rate': [2e-6],
+        'ppo_learning_rate': [5e-7],
         
         'ppo_gamma': [0.9999],
         'ppo_gae_lambda': [0.95],
-        'ppo_clip_range': [0.2],
-        'ppo_ent_coef': [0.001],
+        'ppo_clip_range': [0.05],
+        'ppo_ent_coef': [0.0],
         'ppo_vf_coef': [0.75],
         'ppo_clip_range_vf': [None],
         'ppo_max_grad_norm': [0.5],
         
-        'do_pretrain': [True],
+        'do_pretrain': [False],
         'do_hyperparam_search': [False],
         
         # Weight transfer
