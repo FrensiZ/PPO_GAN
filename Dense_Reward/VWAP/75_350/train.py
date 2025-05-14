@@ -59,11 +59,9 @@ DISCRIMINATOR_EMB_DIM = 128
 DISCRIMINATOR_HIDDEN_DIM = 256
 D_DROPOUT_RATE = 0.0
 D_PRETRAIN_EPOCHS = 20
-D_BATCH_SIZE = 64
 D_LR_PATIENCE = 10
 D_LR_DECAY = 0.7
 D_LR_MIN = 1e-5
-D_PRETRAIN_LR = 5e-4
 
 def set_seed(seed):
     """Set random seed for reproducibility."""
@@ -187,7 +185,7 @@ def main():
     
     # Initialize optimizers
     g_optimizer_pretrain = th.optim.Adam(generator.parameters(), lr=config['g_pretrain_lr'])
-    d_optimizer_pretrain = th.optim.Adam(discriminator.parameters(), lr=D_PRETRAIN_LR)
+    d_optimizer_pretrain = th.optim.Adam(discriminator.parameters(), lr=config['d_pretrain_lr'])
     d_optimizer = th.optim.Adam(discriminator.parameters(), lr=config['d_learning_rate'])
     
     gen_weights_path = None
@@ -219,7 +217,7 @@ def main():
             optimizer=d_optimizer_pretrain,
             train_data=train_data, 
             val_data=val_data_short,  # Use short validation data
-            batch_size=D_BATCH_SIZE,
+            batch_size=config['d_batch_size'],
             pretrain_epochs=D_PRETRAIN_EPOCHS,
             log_file=disc_pretrain_log,
             lr_patience=D_LR_PATIENCE,
@@ -312,7 +310,7 @@ def main():
         discriminator=discriminator,
         d_optimizer=d_optimizer,
         d_epochs=config.get('d_epochs', 5),
-        d_batch_size=D_BATCH_SIZE,
+        d_batch_size=config['d_batch_size'],
         train_data=train_data,
         val_data=val_data_short,
         inference_val_data=val_data_long,  # Use val_data_long instead of test_data

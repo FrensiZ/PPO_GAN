@@ -39,19 +39,22 @@ PARALLEL_CONFIG = {
         # Pretraining Generator
         'g_pretrain_lr': [5e-4],
         'g_pretrain_batch_size': [128],
-        'g_pretrain_epochs': [150],
+        'g_pretrain_epochs': [60],
         'g_eval_pretrain_epochs': [5],
 
         # Discriminator parameters
+        'd_pretrain_lr': [1e-3, 8e-4, 5e-4, 2e-4, 9e-5, 5e-5],
+        'd_batch_size': [32, 64, 128, 256],
         'd_learning_rate': [1e-7],
         
         # Number of batches for discriminator training per PPO rollout
         'd_epochs': [10],
 
         # PPO parameters
-        'ppo_total_timesteps': [500 * 5],
-        'ppo_n_steps': [100 * 2],
-        'ppo_batch_size': [100 // 2],
+        'ppo_total_timesteps': [75 * 4],
+        #'ppo_total_timesteps': [75 * 80],
+        'ppo_n_steps': [75 * 2],
+        'ppo_batch_size': [75 * 1],
         'ppo_n_epochs': [2],
 
         'use_linear_lr_decay': [False],
@@ -68,7 +71,7 @@ PARALLEL_CONFIG = {
         'ppo_max_grad_norm': [0.5],
         
         'do_pretrain': [True],
-        'do_hyperparam_search': [False],
+        'do_hyperparam_search': [True],
         
         # Weight transfer
         'transfer_weights': [True],
