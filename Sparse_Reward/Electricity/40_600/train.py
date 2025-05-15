@@ -45,8 +45,8 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 # ============= FIXED PARAMETERS =============
 # Data parameters
 VOCAB_SIZE = 500  
-TRAIN_SEQ_LENGTH = 40           # Short sequence for training
-INFERENCE_SEQ_LENGTH = 600      # Long sequence for inference
+TRAIN_SEQ_LENGTH = 30           # Short sequence for training
+INFERENCE_SEQ_LENGTH = 300      # Long sequence for inference
 # ============= FIXED PARAMETERS ============= #
 
 # GENERATOR
@@ -58,7 +58,7 @@ G_LR_DECAY = 0.5
 DISCRIMINATOR_EMB_DIM = 128
 DISCRIMINATOR_HIDDEN_DIM = 256
 D_DROPOUT_RATE = 0.0
-D_PRETRAIN_EPOCHS = 15
+D_PRETRAIN_EPOCHS = 2
 D_LR_PATIENCE = 10
 D_LR_DECAY = 0.7
 D_LR_MIN = 1e-5
@@ -78,10 +78,10 @@ def load_data():
     """Load and return electricity sequence data."""
     print("Loading electricity sequence data...")
     
-    train_data = np.load(DATA_DIR / 'train_electricity_40_500.npy')
-    val_data_short = np.load(DATA_DIR / 'val_short_electricity_40_500.npy')
-    val_data_long = np.load(DATA_DIR / 'val_long_electricity_600_500.npy')
-    test_data = np.load(DATA_DIR / 'test_electricity_600_500.npy')
+    train_data = np.load(DATA_DIR / 'train_electricity_30_500.npy')
+    val_data_short = np.load(DATA_DIR / 'val_short_electricity_30_500.npy')
+    val_data_long = np.load(DATA_DIR / 'val_long_electricity_300_500.npy')
+    test_data = np.load(DATA_DIR / 'test_electricity_300_500.npy')
     
     print(f"Loaded data:")
     print(f"  Train: {train_data.shape}")
