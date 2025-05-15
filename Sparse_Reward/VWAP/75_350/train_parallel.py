@@ -26,7 +26,7 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 # Settings for hyperparameter search
 PARALLEL_CONFIG = {
     
-    'num_seeds': 10,
+    'num_seeds': 30,
     
     'param_grid': {
 
@@ -59,9 +59,7 @@ PARALLEL_CONFIG = {
         'use_linear_lr_decay': [False],
         'min_ppo_lr': [1e-5],
 
-        'ppo_learning_rate': [1e-5, 9e-6, 8e-6, 7e-6, 6e-6, 5e-6, 4e-6, 3e-6, 2e-6, 1e-6],
-
-        #'ppo_learning_rate': [9e-6],
+        'ppo_learning_rate': [8e-6],
         
         'ppo_gamma': [0.999],
         'ppo_gae_lambda': [0.95],
@@ -72,7 +70,7 @@ PARALLEL_CONFIG = {
         'ppo_max_grad_norm': [0.5],
         
         'do_pretrain': [False],
-        'do_hyperparam_search': [True],
+        'do_hyperparam_search': [False],
         
         # Weight transfer
         'transfer_weights': [True],
@@ -88,7 +86,7 @@ def get_config_hash(config):
 
 def get_free_gpus():
     """Find all free GPUs to use from the allowed GPUs."""
-    allowed_gpus = [0,3,4,5,6,7]  # Only use these GPUs
+    allowed_gpus = [0,1,2,3,4,5,6,7]  # Only use these GPUs
     try:
         result = subprocess.run(
             ['nvidia-smi', '--query-gpu=memory.used,memory.free,utilization.gpu', '--format=csv,nounits,noheader'], 
