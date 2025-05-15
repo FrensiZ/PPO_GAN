@@ -81,7 +81,7 @@ def load_data():
     train_data = np.load(DATA_DIR / 'train_vwap_75_500.npy')
     val_data_short = np.load(DATA_DIR / 'val_short_vwap_75_500.npy')
     val_data_long = np.load(DATA_DIR / 'val_long_vwap_350_500.npy')
-    test_data = np.load(DATA_DIR / 'test_vwap.npy_350_500.npy')
+    test_data = np.load(DATA_DIR / 'test_vwap_350_500.npy')
     
     print(f"Loaded data:")
     print(f"  Train: {train_data.shape}")
