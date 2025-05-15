@@ -51,18 +51,17 @@ PARALLEL_CONFIG = {
         'd_epochs': [10],
 
         # PPO parameters
-        'ppo_total_timesteps': [30 * 3],
-        #'ppo_total_timesteps': [30 * 60],
-        'ppo_n_steps': [30 * 1],
-        'ppo_batch_size': [30 // 2],
-        'ppo_n_epochs': [1],
+        'ppo_total_timesteps': [30 * 200],
+        'ppo_n_steps': [30 * 2],
+        'ppo_batch_size': [30 * 1],
+        'ppo_n_epochs': [2],
 
         'use_linear_lr_decay': [False],
         'min_ppo_lr': [1e-5],
 
-        'ppo_learning_rate': [1e-6],
+        'ppo_learning_rate': [4e-6],
         
-        'ppo_gamma': [0.9999],
+        'ppo_gamma': [0.999],
         'ppo_gae_lambda': [0.95],
         'ppo_clip_range': [0.2],
         'ppo_ent_coef': [0.0],
@@ -70,7 +69,7 @@ PARALLEL_CONFIG = {
         'ppo_clip_range_vf': [None],
         'ppo_max_grad_norm': [0.5],
         
-        'do_pretrain': [True],
+        'do_pretrain': [False],
         'do_hyperparam_search': [False],
         
         # Weight transfer
