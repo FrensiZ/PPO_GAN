@@ -51,7 +51,7 @@ PARALLEL_CONFIG = {
         'd_epochs': [10],
 
         # PPO parameters
-        'ppo_total_timesteps': [40 * 50],
+        'ppo_total_timesteps': [40 * 60],
         'ppo_n_steps': [40 * 1],
         'ppo_batch_size': [40 // 2],
         'ppo_n_epochs': [1],
