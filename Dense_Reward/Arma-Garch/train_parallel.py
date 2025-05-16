@@ -39,7 +39,7 @@ PARALLEL_CONFIG = {
         # Pretraining Generator
         'g_pretrain_lr': [5e-4],
         'g_pretrain_batch_size': [128],
-        'g_pretrain_epochs': [150],
+        'g_pretrain_epochs': [50],
         'g_eval_pretrain_epochs': [5],
 
         # Discriminator parameters
@@ -51,7 +51,8 @@ PARALLEL_CONFIG = {
         'd_epochs': [10],
 
         # PPO parameters
-        'ppo_total_timesteps': [30 * 200],
+        'ppo_total_timesteps': [30 * 5],
+        #'ppo_total_timesteps': [30 * 200],
         'ppo_n_steps': [30 * 2],
         'ppo_batch_size': [30 * 1],
         'ppo_n_epochs': [2],
@@ -69,7 +70,7 @@ PARALLEL_CONFIG = {
         'ppo_clip_range_vf': [None],
         'ppo_max_grad_norm': [0.5],
         
-        'do_pretrain': [False],
+        'do_pretrain': [True],
         'do_hyperparam_search': [False],
         
         # Weight transfer
@@ -86,7 +87,7 @@ def get_config_hash(config):
 
 def get_free_gpus():
     """Find all free GPUs to use from the allowed GPUs."""
-    allowed_gpus = [0,2,3,4,7]  # Only use these GPUs
+    allowed_gpus = [0,2,4]  # Only use these GPUs
     try:
         result = subprocess.run(
             ['nvidia-smi', '--query-gpu=memory.used,memory.free,utilization.gpu', '--format=csv,nounits,noheader'], 
