@@ -1,4 +1,3 @@
-
 import os
 import numpy as np
 import torch as th
@@ -8,7 +7,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 class Generator(nn.Module):
     
-    def __init__(self, vocab_size, hidden_dim, sequence_length, start_token, device, num_layers=2):
+    def __init__(self, vocab_size, hidden_dim, sequence_length, start_token, num_layers, device):
         
         super(Generator, self).__init__()
         
@@ -20,7 +19,7 @@ class Generator(nn.Module):
         self.device = device
         
         self.lstm = nn.LSTM(vocab_size, hidden_dim, num_layers=num_layers, batch_first=True)
-        self.fc = nn.Linear(hidden_dim, vocab_size)    # Action head
+        self.output_layer = nn.Linear(hidden_dim, vocab_size)    # Action head
 
         # Initialize on device
         self.to(self.device)
@@ -44,7 +43,7 @@ class Generator(nn.Module):
             x_onehot = self._to_onehot_single(x)    # Single token [batch_size, 1]
         
         lstm_out, hidden = self.lstm(x_onehot, hidden)  # lstm_out: [batch_size, sequence_length, hidden_dim]
-        logits = self.fc(lstm_out)             # Output layer
+        logits = self.output_layer(lstm_out)             # Output layer
         
         return logits, hidden
     
@@ -90,7 +89,9 @@ class Generator(nn.Module):
         return loss.item()
 
 
-def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_size, generated_num, positive_samples, eval_freq, lr_patience, lr_decay, log_path):
+def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_size, 
+                    generated_num, positive_samples, eval_freq, 
+                    lr_patience, lr_decay, log_path):
     
     print('Start pre-training...')
 
@@ -122,10 +123,9 @@ def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_s
             
             # Calculate NLL using the oracle
             nll = target_lstm.calculate_nll(generated_samples)
-            print(f'Epoch {epoch}, NLL: {nll:.4f}')
 
             # Log to file
-            buffer = f'epoch:\t{epoch}\tnll:\t{nll:.5f}\n'
+            buffer = f'epoch:\t{epoch}\tnll:\t{nll:.4f}\n'
             log.write(buffer)
             log.flush()  # Ensure it's written immediately
         
@@ -157,73 +157,32 @@ def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_s
     
     print('Pretraining finished!')
 
-def transfer_weights_from_saved(weights_path, ppo_model, transfer_head, vocab_size, hidden_dim, sequence_length, start_token, num_layers, device):
+def generator_adversarial_update(generator, sequences, rewards, optimizer):
 
-    # Create temporary supervised model to load weights into
-    temp_generator = Generator(vocab_size, hidden_dim, sequence_length, start_token, device, num_layers)
-    
-    # Load the saved weights
-    saved_weights = th.load(weights_path, weights_only=False)
-    temp_generator.load_state_dict(saved_weights['model_state_dict'])    
-    
-    # Transfer LSTM weights
-    print("\n=== Transferring LSTM Weights ===")
-    supervised_state_dict = temp_generator.state_dict()
-    ppo_lstm_dict = ppo_model.policy.lstm_actor.state_dict()
-    
-    # Print shapes before transfer for verification
-    print("\nWeight shapes before transfer:")
-    print("\nSupervised LSTM weights:")
-    for key, value in supervised_state_dict.items():
-        if 'lstm' in key:
-            print(f"{key}: {value.shape}")
-    
-    print("\nPPO LSTM weights:")
-    for key, value in ppo_lstm_dict.items():
-        print(f"{key}: {value.shape}")
-    
-    # Transfer LSTM weights
-    lstm_transfer_count = 0
-    for ppo_key in ppo_lstm_dict.keys():
-        supervised_key = f"lstm.{ppo_key}"
-        if supervised_key in supervised_state_dict:
-            if ppo_lstm_dict[ppo_key].shape == supervised_state_dict[supervised_key].shape:
-                ppo_lstm_dict[ppo_key].copy_(supervised_state_dict[supervised_key])
-                lstm_transfer_count += 1
-                print(f"Transferred weights for {ppo_key}")
-            else:
-                print(f"Shape mismatch for {ppo_key}")
-    
-    # Load the LSTM weights
-    ppo_model.policy.lstm_actor.load_state_dict(ppo_lstm_dict)
-    print(f"\nSuccessfully transferred {lstm_transfer_count} LSTM weight tensors")
-    
-    # Transfer head weights if requested
-    if transfer_head:
-        print("\n=== Transferring Head Weights ===")
-        # Get supervised fc weights and biases
-        fc_weight = supervised_state_dict['fc.weight']
-        fc_bias = supervised_state_dict['fc.bias']
-        
-        # Get PPO action_net weights and biases
-        action_net_state_dict = ppo_model.policy.action_net.state_dict()
-        
-        print("\nHead weight shapes:")
-        print(f"Supervised fc weight: {fc_weight.shape}")
-        print(f"Supervised fc bias: {fc_bias.shape}")
-        print(f"PPO action_net weight: {action_net_state_dict['weight'].shape}")
-        print(f"PPO action_net bias: {action_net_state_dict['bias'].shape}")
-        
-        # Verify shapes match before transfer
-        if (fc_weight.shape == action_net_state_dict['weight'].shape and 
-            fc_bias.shape == action_net_state_dict['bias'].shape):
-            # Transfer weights
-            action_net_state_dict['weight'].copy_(fc_weight)
-            action_net_state_dict['bias'].copy_(fc_bias)
-            ppo_model.policy.action_net.load_state_dict(action_net_state_dict)
-            print("Successfully transferred head weights")
-        else:
-            print("Shape mismatch in head weights - transfer aborted")
-    
-    return ppo_model
+    optimizer.zero_grad()
 
+    inputs = sequences[:, :-1]  # all but the last token
+    targets = sequences[:, 1:]  # all but the first token
+    logits, _ = generator(inputs)
+    
+    log_probs = F.log_softmax(logits, dim=-1)
+    
+    # Create a one-hot representation of the targets
+    one_hot_targets = F.one_hot(targets, num_classes=generator.vocab_size).float()
+    
+    # Calculate the log probability of the selected actions
+    # This gives us a tensor of shape [batch_size, seq_length-1, vocab_size]
+    selected_log_probs = th.sum(log_probs * one_hot_targets, dim=-1)
+    
+    # Slice rewards to match (exclude reward for the start token)
+    sequence_rewards = rewards[:, 1:]
+    
+    # Policy gradient loss: negative mean of (log_prob * reward)
+    # We use negative because we're minimizing loss but want to maximize reward
+    loss = -th.mean(selected_log_probs * sequence_rewards)
+    
+    # Backpropagate and update
+    loss.backward()
+    optimizer.step()
+    
+    return loss.item()
