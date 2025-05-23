@@ -132,12 +132,19 @@ class CustomCallback(BaseCallback):
                 print(f"Initial KL divergence (long sequences): {self.initial_kl:.6f}")
             
             # Save model if LONG sequence Wasserstein improves AND KL is below threshold
-            if long_wasserstein_norm < self.best_wasserstein and long_kl < self.initial_kl and self.rollout_count > 1:
+            if long_kl < self.best_kl and self.rollout_count > 1:
                 self.best_wasserstein = long_wasserstein_norm
                 self.best_kl = long_kl  # Track best KL that meets criteria
                 
                 self.model.save(str(self.model_path))
                 print(f"New best model saved with Long Wasserstein: {long_wasserstein_norm:.6f}, Long KL: {long_kl:.6f}")
+
+            # if long_wasserstein_norm < self.best_wasserstein and long_kl < self.initial_kl and self.rollout_count > 1:
+            #     self.best_wasserstein = long_wasserstein_norm
+            #     self.best_kl = long_kl  # Track best KL that meets criteria
+                
+            #     self.model.save(str(self.model_path))
+            #     print(f"New best model saved with Long Wasserstein: {long_wasserstein_norm:.6f}, Long KL: {long_kl:.6f}")
 
     def _on_training_end(self):
         """Called at the end of training - just log the best validation performance"""

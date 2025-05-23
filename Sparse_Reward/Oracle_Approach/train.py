@@ -42,22 +42,6 @@ ORACLE_EMB_DIM = 32
 ORACLE_HIDDEN_DIM = 32
 ORACLE_PARAMS_PATH = SAVE_DIR / 'target_params.pkl'
 
-# GENERATOR
-G_NUM_LAYERS = 2
-G_LR_PATIENCE = 5
-G_LR_DECAY = 0.5
-
-# DISCRIMINATOR
-DISCRIMINATOR_EMB_DIM = 64
-DISCRIMINATOR_HIDDEN_DIM = 128
-D_DROPOUT_RATE = 0.2
-D_OUTER_EPOCH = 15
-D_INNTER_EPOCH = 3
-D_BATCH_SIZE = 128
-D_LR_PATIENCE = 10
-D_LR_DECAY = 0.5
-D_LR_MIN = 1e-5
-D_PRETRAIN_LR = 5e-3
 
 def set_seed(seed):
     """Set random seed for reproducibility."""
@@ -116,7 +100,7 @@ def main():
     print(f"  Seed: {seed}")
     print(f"  Device: {device}")
     print(f"  Generator Hidden Dim: {config['g_hidden_dim']}")
-    print(f"  PPO Learning Rate: {config['ppo_learning_rate']}")
+    print(f"  PPO Learning Rate: {config['g_learning_rate']}")
     print(f"  Discriminator Learning Rate: {config['d_learning_rate']}")
     print(f"  PPO Total Timesteps: {config['ppo_total_timesteps']}")
     
@@ -154,21 +138,22 @@ def main():
         sequence_length=SEQ_LENGTH,
         start_token=START_TOKEN,
         device=device,
-        num_layers=G_NUM_LAYERS
+        num_layers=config['g_num_layers'],
     )
     
     # Create discriminator
     discriminator = Discriminator(
         vocab_size=VOCAB_SIZE,
-        embedding_dim=DISCRIMINATOR_EMB_DIM,
-        hidden_dim=DISCRIMINATOR_HIDDEN_DIM,
-        dropout_rate=D_DROPOUT_RATE,
+        embedding_dim=config['d_emb_dim'],
+        hidden_dim=config['d_hidden_dim'],
+        dropout_rate=config['d_dropout'],
+        num_layers=config['d_num_layers'],
         device=device
     )
     
     # Initialize optimizers
-    g_optimizer_pretrain = th.optim.Adam(generator.parameters(), lr=config['g_pretrain_lr'])
-    d_pretrain_optimizer = th.optim.Adam(discriminator.parameters(), lr=D_PRETRAIN_LR)
+    g_optimizer_pretrain = th.optim.Adam(generator.parameters(), lr=config['g_lr_pretrain'])
+    d_pretrain_optimizer = th.optim.Adam(discriminator.parameters(), lr=config['d_lr_pretrain'])
 
     d_optimizer = th.optim.Adam(discriminator.parameters(), lr=config['d_learning_rate'])
 
@@ -187,8 +172,8 @@ def main():
             generated_num=GENERATED_NUM,
             positive_samples=positive_samples,
             eval_freq=config['g_eval_pretrain_epochs'],
-            lr_patience=G_LR_PATIENCE,
-            lr_decay=G_LR_DECAY,
+            lr_patience=config['g_lr_patience'],
+            lr_decay=config['g_lr_decay'],
             log_path=gen_pretrain_log
         )
 
@@ -199,15 +184,15 @@ def main():
             generator=generator,
             discriminator=discriminator,
             optimizer=d_pretrain_optimizer,
-            outer_epochs=D_OUTER_EPOCH,
-            inner_epochs=D_INNTER_EPOCH,
-            batch_size=D_BATCH_SIZE,
+            outer_epochs=config['d_outer_epochs'],
+            inner_epochs=config['d_inner_epochs'],
+            batch_size=config['d_batch_size'],
             generated_num=GENERATED_NUM,
             positive_samples=positive_samples,
             log_file=disc_pretrain_log,
-            lr_patience=D_LR_PATIENCE,
-            lr_decay=D_LR_DECAY,
-            min_lr=D_LR_MIN
+            lr_patience=config['d_lr_patience'],
+            lr_decay=config['d_lr_decay'],
+            min_lr=config['d_lr_min'],
         )
 
         # Save pretrained models
@@ -312,7 +297,7 @@ def main():
         d_optimizer=d_optimizer,
         d_steps=config['d_steps'],
         k_epochs=config['k_epochs'],
-        d_batch_size=D_BATCH_SIZE,
+        d_batch_size=config['d_batch_size'],
         positive_samples=positive_samples,
         sequence_length=SEQ_LENGTH,
         start_token=START_TOKEN,
@@ -326,12 +311,12 @@ def main():
     if config.get('use_linear_lr_decay', False):
         # Use linearly decaying learning rate
         min_lr = config['min_ppo_lr']
-        max_lr = config['ppo_learning_rate']
+        max_lr = config['g_learning_rate']
         timesteps = config['ppo_total_timesteps']
         learning_rate = get_linear_fn(min_lr, max_lr, timesteps)
     else:
         # Use constant learning rate
-        learning_rate = config['ppo_learning_rate']
+        learning_rate = config['g_learning_rate']
     
     # Create PPO model
     ppo_model = RecurrentPPO(
@@ -352,7 +337,7 @@ def main():
         verbose=0,
         policy_kwargs=dict(
             lstm_hidden_size=config['g_hidden_dim'],
-            n_lstm_layers=G_NUM_LAYERS,
+            n_lstm_layers=config['g_num_layers'],
             shared_lstm=False,
             enable_critic_lstm=True,
             net_arch=dict(pi=[], vf=[]),
@@ -374,7 +359,7 @@ def main():
             hidden_dim=config['g_hidden_dim'],
             sequence_length=SEQ_LENGTH,
             start_token=START_TOKEN,
-            num_layers=G_NUM_LAYERS,
+            num_layers=config['g_num_layers'],
             device=device
         )
 

@@ -186,3 +186,75 @@ def generator_adversarial_update(generator, sequences, rewards, optimizer):
     optimizer.step()
     
     return loss.item()
+
+def transfer_weights_from_saved(weights_path, ppo_model, transfer_head, vocab_size, hidden_dim, sequence_length, start_token, num_layers, device):
+
+    # Create temporary supervised model to load weights into
+    temp_generator = Generator(vocab_size, hidden_dim, sequence_length, start_token, device, num_layers)
+    
+    # Load the saved weights
+    saved_weights = th.load(weights_path, weights_only=False)
+    temp_generator.load_state_dict(saved_weights['model_state_dict'])    
+    
+    # Transfer LSTM weights
+    print("\n=== Transferring LSTM Weights ===")
+    supervised_state_dict = temp_generator.state_dict()
+    ppo_lstm_dict = ppo_model.policy.lstm_actor.state_dict()
+    
+    # Print shapes before transfer for verification
+    print("\nWeight shapes before transfer:")
+    print("\nSupervised LSTM weights:")
+    for key, value in supervised_state_dict.items():
+        if 'lstm' in key:
+            print(f"{key}: {value.shape}")
+    
+    print("\nPPO LSTM weights:")
+    for key, value in ppo_lstm_dict.items():
+        print(f"{key}: {value.shape}")
+    
+    # Transfer LSTM weights
+    lstm_transfer_count = 0
+    for ppo_key in ppo_lstm_dict.keys():
+        supervised_key = f"lstm.{ppo_key}"
+        if supervised_key in supervised_state_dict:
+            if ppo_lstm_dict[ppo_key].shape == supervised_state_dict[supervised_key].shape:
+                ppo_lstm_dict[ppo_key].copy_(supervised_state_dict[supervised_key])
+                lstm_transfer_count += 1
+                print(f"Transferred weights for {ppo_key}")
+            else:
+                print(f"Shape mismatch for {ppo_key}")
+    
+    # Load the LSTM weights
+    ppo_model.policy.lstm_actor.load_state_dict(ppo_lstm_dict)
+    print(f"\nSuccessfully transferred {lstm_transfer_count} LSTM weight tensors")
+    
+    # Transfer head weights if requested
+    if transfer_head:
+        print("\n=== Transferring Head Weights ===")
+        # Get supervised fc weights and biases
+        fc_weight = supervised_state_dict['fc.weight']
+        fc_bias = supervised_state_dict['fc.bias']
+        
+        # Get PPO action_net weights and biases
+        action_net_state_dict = ppo_model.policy.action_net.state_dict()
+        
+        print("\nHead weight shapes:")
+        print(f"Supervised fc weight: {fc_weight.shape}")
+        print(f"Supervised fc bias: {fc_bias.shape}")
+        print(f"PPO action_net weight: {action_net_state_dict['weight'].shape}")
+        print(f"PPO action_net bias: {action_net_state_dict['bias'].shape}")
+        
+        # Verify shapes match before transfer
+        if (fc_weight.shape == action_net_state_dict['weight'].shape and 
+            fc_bias.shape == action_net_state_dict['bias'].shape):
+            # Transfer weights
+            action_net_state_dict['weight'].copy_(fc_weight)
+            action_net_state_dict['bias'].copy_(fc_bias)
+            ppo_model.policy.action_net.load_state_dict(action_net_state_dict)
+            print("Successfully transferred head weights")
+        else:
+            print("Shape mismatch in head weights - transfer aborted")
+    
+    return ppo_model
+
+

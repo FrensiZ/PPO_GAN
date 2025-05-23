@@ -23,51 +23,67 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 
 PARALLEL_CONFIG = {
     
-    'num_seeds': 6,
+    'num_seeds':                    6,
     
     'param_grid': {
 
-        # Generator architecture
-        'g_hidden_dim': [256],
+        'd_emb_dim':                [64],
+        'd_hidden_dim':             [128],
+        'd_num_layers':             [2],
+
+        'g_hidden_dim':             [256],
+        'g_num_layers':             [2],
         
-        # Evaluation
-        'eval_freq': [2],
+        ### PREATRINING
 
-        # Pretraining Generator
-        'g_pretrain_lr': [1e-2],
-        'g_pretrain_batch_size': [128],
-        'g_pretrain_epochs': [100],
-        'g_eval_pretrain_epochs': [5],
+        'g_pretrain_epochs':        [150],
 
-        # Discriminator parameters
-        'd_learning_rate': [1e-6],
+        'd_outer_epochs':           [50],
+        'd_inner_epochs':           [1],
+        'd_lr_patience':            [10],
+        'd_lr_decay':               [0.5],
+
+        'd_dropout':                [0.2],
+        'd_batch_size':             [128],
+        'g_eval_pretrain_epochs':   [5],
+        'g_pretrain_batch_size':    [128], 
+
+        'd_lr_pretrain':            [5e-3],
+        'd_lr_min':                 [1e-5],
+
+        'g_lr_pretrain':            [1e-2],
+        'g_lr_patience':            [5],
+        'g_lr_decay':               [0.7],
+
+        ### ADVERSARIAL TRAINING
+
+        'eval_freq':                [1],
+
+        'do_pretrain':              [False],
+        'transfer_weights':         [True],
+        'transfer_head':            [True],
+        'use_linear_lr_decay':      [False],
+        'min_ppo_lr':               [1e-5],
+
+        'ppo_total_timesteps':      [20 * 8 * 50],
+        'ppo_n_steps':              [20 * 8],
+        'ppo_batch_size':           [20 * 4],
+        'ppo_n_epochs':             [2],
+
+        'ppo_gamma':                [0.999],
+        'ppo_gae_lambda':           [0.95],
+        'ppo_clip_range':           [0.2],
+        'ppo_ent_coef':             [0.001],
+        'ppo_vf_coef':              [0.75],
+        'ppo_clip_range_vf':        [None],
+        'ppo_max_grad_norm':        [0.5],
         
         'd_steps': [1],
         'k_epochs': [2],
 
-        # # PPO parameters
-        'ppo_total_timesteps': [20 * 8 * 50],
-        'ppo_n_steps': [20 * 8],
-        'ppo_batch_size': [20 * 4],
-        'ppo_n_epochs': [2],
+        'd_learning_rate': [1e-6],
+        'g_learning_rate': [8e-4, 4e-4]
 
-        'use_linear_lr_decay': [False],
-        'min_ppo_lr': [1e-5],
-
-        'ppo_learning_rate': [8e-4, 4e-4],
-        
-        'ppo_gamma': [0.99, 0.999, 1.0],
-        'ppo_gae_lambda': [0.9, 0.95, 1.0],
-        'ppo_clip_range': [0.1, 0.2, 0.3],
-        'ppo_ent_coef': [0.0, 0.001, 0.01, 0.05],
-        'ppo_vf_coef': [0.25, 0.5, 0.75],
-        'ppo_clip_range_vf': [None],
-        'ppo_max_grad_norm': [0.5],
-        
-        # Weight transfer
-        'do_pretrain': [False],
-        'transfer_weights': [True],
-        'transfer_head': [True]
     },
     'output_dir': RESULTS_DIR,
 }
