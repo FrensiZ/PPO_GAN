@@ -6,13 +6,13 @@ import torch.nn.functional as F
 
 class TokenGenerationEnv(gym.Env):
 
-    def __init__(self, discriminator, vocab_size, seq_length, start_token_distribution, device):
+    def __init__(self, discriminator, vocab_size, seq_length, start_token, device):
         super(TokenGenerationEnv, self).__init__()
         
         self.discriminator = discriminator
         self.vocab_size = vocab_size
         self.seq_length = seq_length
-        self.start_token_distribution = start_token_distribution
+        self.start_token = start_token
         self.device = device
         
         self.action_space = spaces.Discrete(vocab_size)
@@ -23,12 +23,10 @@ class TokenGenerationEnv(gym.Env):
     
     def reset(self, seed=None, options=None):
 
-        start_token = np.random.choice(self.vocab_size, p=self.start_token_distribution)
-        
         self.current_sequence = []
         self.current_position = 0
         
-        return int(start_token), {}
+        return int(self.start_token), {}
 
     def step(self, action):
         
@@ -53,14 +51,11 @@ class TokenGenerationEnv(gym.Env):
         sequence_tensor = th.tensor([self.current_sequence], dtype=th.long, device=self.device)
         
         with th.no_grad():
-            # Get logits from discriminator for the full sequence
+            
             logits = self.discriminator(sequence_tensor)
             
-            # Create a "real" target (we want sequences the discriminator thinks are real)
             target_real = th.ones_like(logits, device=self.device)
-            
-            # Calculate negative BCE loss as reward (lower BCE means better sequence)
-            # We use negative because we want higher rewards for better sequences
+
             reward = -F.binary_cross_entropy_with_logits(logits, target_real).item()
         
         return float(reward)

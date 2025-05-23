@@ -60,6 +60,7 @@ def main():
     # Get environment variables
     config_path = os.getenv('CONFIG_PATH')
     seed = int(os.getenv('SEED', '0'))
+    config_id = int(os.getenv('CONFIG_ID', '-1'))
     output_dir = Path(os.getenv('OUTPUT_DIR', RESULTS_DIR / "ppo_seqgan_runs"))
     
     # Set seed for reproducibility
@@ -304,7 +305,7 @@ def main():
         generated_num=GENERATED_NUM,
         eval_freq=config['eval_freq'],
         verbose=0,
-        log_path=ppo_log
+        log_path=adversarial_log
     )
     
     # Configure learning rate for PPO

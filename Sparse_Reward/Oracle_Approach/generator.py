@@ -190,7 +190,7 @@ def generator_adversarial_update(generator, sequences, rewards, optimizer):
 def transfer_weights_from_saved(weights_path, ppo_model, transfer_head, vocab_size, hidden_dim, sequence_length, start_token, num_layers, device):
 
     # Create temporary supervised model to load weights into
-    temp_generator = Generator(vocab_size, hidden_dim, sequence_length, start_token, device, num_layers)
+    temp_generator = Generator(vocab_size, hidden_dim, sequence_length, start_token, num_layers, device)
     
     # Load the saved weights
     saved_weights = th.load(weights_path, weights_only=False)
@@ -232,8 +232,8 @@ def transfer_weights_from_saved(weights_path, ppo_model, transfer_head, vocab_si
     if transfer_head:
         print("\n=== Transferring Head Weights ===")
         # Get supervised fc weights and biases
-        fc_weight = supervised_state_dict['fc.weight']
-        fc_bias = supervised_state_dict['fc.bias']
+        fc_weight = supervised_state_dict['output_layer.weight']
+        fc_bias = supervised_state_dict['output_layer.bias']
         
         # Get PPO action_net weights and biases
         action_net_state_dict = ppo_model.policy.action_net.state_dict()

@@ -78,11 +78,11 @@ PARALLEL_CONFIG = {
         'ppo_clip_range_vf':        [None],
         'ppo_max_grad_norm':        [0.5],
         
-        'd_steps': [1],
-        'k_epochs': [2],
+        'd_steps':                  [1],
+        'k_epochs':                 [2],
 
-        'd_learning_rate': [1e-6],
-        'g_learning_rate': [8e-4, 4e-4]
+        'd_learning_rate':          [1e-6],
+        'g_learning_rate':          [8e-4, 4e-4]
 
     },
     'output_dir': RESULTS_DIR,

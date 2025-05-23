@@ -165,8 +165,8 @@ class CustomCallback(BaseCallback):
         self.discriminator.eval()
 
         with th.no_grad():
-            real_preds = self.discriminator.get_reward(self.positive_samples)
-            fake_preds = self.discriminator.get_reward(negative_samples)
+            real_preds = self.discriminator.get_sequence_probability(self.positive_samples)
+            fake_preds = self.discriminator.get_sequence_probability(negative_samples)
 
             # Calculate metrics
             real_correct = (real_preds >= 0.5).sum().item()
