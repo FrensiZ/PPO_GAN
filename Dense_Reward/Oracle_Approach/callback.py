@@ -65,6 +65,7 @@ class CustomCallback(BaseCallback):
             value_loss = self.logger.name_to_value.get('train/value_loss', 0)
             entropy = self.logger.name_to_value.get('train/entropy_loss', 0)
 
+            # Get rewards directly from rollout buffer
             avg_reward = 0
             if hasattr(self.model, 'rollout_buffer') and self.model.rollout_buffer is not None:
                 rewards = self.model.rollout_buffer.rewards
@@ -74,24 +75,15 @@ class CustomCallback(BaseCallback):
                 ep_start_idx = np.where(episode_starts)[0]
                 if not episode_starts[0]:
                     ep_start_idx = np.r_[0, ep_start_idx]
-                
-                # Calculate sum of rewards for each sequence
+                    
+                # Calculate rewards for complete sequences
                 if len(ep_start_idx) > 1:
-                    # Get the end indices for each episode
-                    ep_end_idx = np.r_[ep_start_idx[1:], len(rewards)]
-                    
-                    # Calculate sum of rewards for each complete sequence
-                    sequence_total_rewards = [np.sum(rewards[start:end]) 
-                                            for start, end in zip(ep_start_idx, ep_end_idx)]
-                    
-                    # Average of the sequence totals
-                    avg_reward = float(np.mean(sequence_total_rewards))
-                
-                # If only one episode, sum all reward
+                    sequence_rewards = np.add.reduceat(rewards, np.r_[0, ep_start_idx[1:]])
+                    avg_reward = float(np.mean(sequence_rewards))
                 elif len(rewards) > 0:
-                    avg_reward = float(np.sum(rewards))
-
-            # Log to file after each rollout
+                    # If only one episode, just take the mean of all rewards
+                    avg_reward = float(np.mean(rewards))
+            
             with open(self.log_path, 'a') as f:
                 # Header
                 if self.rollout_count == self.eval_freq:   
@@ -166,8 +158,6 @@ class CustomCallback(BaseCallback):
         # Average discriminator loss
         avg_d_loss = sum(d_losses) / len(d_losses) if d_losses else 0
 
-        self.discriminator.eval()
-        
         return avg_d_loss
     
     def _evaluate_discriminator(self, negative_samples):

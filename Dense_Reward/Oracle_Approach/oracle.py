@@ -134,3 +134,4 @@ class Oracle(nn.Module):
         with open(file_path, 'w') as f:
             for sample in samples.cpu().numpy():
                 f.write(' '.join([str(int(x)) for x in sample]) + '\n')
+

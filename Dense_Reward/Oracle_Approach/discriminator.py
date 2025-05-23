@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 class Discriminator(nn.Module):
 
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, dropout_rate, device, num_layers=2):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, dropout_rate, num_layers, device):
         
         super(Discriminator, self).__init__()
         
@@ -68,7 +68,7 @@ class Discriminator(nn.Module):
         logits = self.fc(final_hidden)
         
         return logits.squeeze(-1), hidden_state  # Return logits and updated hidden state
-    
+
     def get_sequence_probability(self, x):
 
         with th.no_grad():
@@ -86,7 +86,6 @@ class Discriminator(nn.Module):
         generated_data = generated_data.to(self.device)
         inputs = th.cat([real_data, generated_data], dim=0)
 
-        # Instead of hard 0/1 targets, use 0.1/0.9
         smooth_real = 0.9  # Instead of 1.0
         smooth_fake = 0.1  # Instead of 0.0
     
@@ -107,7 +106,6 @@ class Discriminator(nn.Module):
         
         return loss.item()
 
-
 def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, outer_epochs, inner_epochs, batch_size, generated_num, positive_samples, log_file, lr_patience, lr_decay, min_lr):
         
     # Open log file
@@ -118,7 +116,6 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
     best_loss = float('inf')
     patience_counter = 0
 
-    
     # Outer loop
     for outer_epoch in range(outer_epochs):
             
@@ -141,60 +138,26 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
             total_loss = 0
             num_batches = 0
             
-            # Keep track of accuracy to stop updates when needed
-            total_accuracy = 0
-            
             # Iterate through batches
             for (pos_batch,), (neg_batch,) in zip(pos_loader, neg_loader):
                 
                 pos_batch = pos_batch.to(discriminator.device)
                 neg_batch = neg_batch.to(discriminator.device)
-
-                # Get current accuracy before training
-                with th.no_grad():
-                    # Forward pass for accuracy check
-                    inputs = th.cat([pos_batch, neg_batch], dim=0)
-                    batch_size = pos_batch.size(0)
-                    targets = th.cat([
-                        th.ones(batch_size, device=discriminator.device),
-                        th.zeros(batch_size, device=discriminator.device)
-                    ], dim=0)
-                    
-                    logits = discriminator(inputs)
-                    preds = (th.sigmoid(logits) >= 0.5).float()
-                    batch_accuracy = (preds == targets).float().mean().item()
                 
-                # If accuracy is too high, don't update weights
-                if batch_accuracy < 0.85:  # Key change: only update when accuracy < 95%
-                    loss = discriminator.train_step(pos_batch, neg_batch, optimizer)
-                else:
-                    # Still calculate loss but don't update
-                    with th.no_grad():
-                        # Forward pass
-                        inputs = th.cat([pos_batch, neg_batch], dim=0)
-                        batch_size = pos_batch.size(0)
-                        # Use smoothed labels here too for consistency
-                        smooth_real = 0.9
-                        smooth_fake = 0.1
-                        targets = th.cat([
-                            th.ones(batch_size, device=discriminator.device) * smooth_real,
-                            th.zeros(batch_size, device=discriminator.device) * smooth_fake
-                        ], dim=0)
-                        
-                        logits = discriminator(inputs)
-                        loss = F.binary_cross_entropy_with_logits(logits, targets)
+                # Use the train_step method which handles the full training loop
+                loss = discriminator.train_step(pos_batch, neg_batch, optimizer)
                 
-                total_loss += loss.item() if isinstance(loss, th.Tensor) else loss
-                total_accuracy += batch_accuracy
+                total_loss += loss
                 num_batches += 1
                 
-                epoch_total_loss += total_loss
+                epoch_total_loss += loss
                 epoch_batches += 1
-
             
             total_epochs += 1
             avg_loss = total_loss / num_batches if num_batches > 0 else 0
-            eval_metrics = evaluate_disc_pretrain(discriminator, target_lstm, generator, num_samples=generated_num//10)
+            
+            # Evaluation
+            eval_metrics = evaluate_discriminator(discriminator, target_lstm, generator, num_samples=int(generated_num/5))
             
             log_str = f'epoch:\t{total_epochs}\tloss:\t{avg_loss:.4f}\t'
             log_str += f'accuracy:\t{eval_metrics["accuracy"]:.4f}\t'
@@ -233,7 +196,7 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
     
     log.close()
 
-def evaluate_disc_pretrain(discriminator, target_lstm, generator, num_samples):
+def evaluate_discriminator(discriminator, target_lstm, generator, num_samples):
     
     discriminator.eval()
     target_lstm.eval()
@@ -244,7 +207,7 @@ def evaluate_disc_pretrain(discriminator, target_lstm, generator, num_samples):
         real_data = target_lstm.generate(num_samples)
         fake_data = generator.generate(num_samples)
         
-        # Get predictions - using get_reward to get probabilities
+        # Get predictions - using get_sequence_probability instead of get_reward
         real_preds = discriminator.get_sequence_probability(real_data)
         fake_preds = discriminator.get_sequence_probability(fake_data)
         
@@ -263,4 +226,3 @@ def evaluate_disc_pretrain(discriminator, target_lstm, generator, num_samples):
     }
     
     return metrics
-

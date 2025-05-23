@@ -15,7 +15,7 @@ from sb3_contrib.ppo_recurrent import RecurrentPPO
 # Import local modules
 from oracle import Oracle
 from generator import Generator, pretrain_generator, transfer_weights_from_saved
-from discriminator import Discriminator, pretrain_discriminator, evaluate_disc_pretrain
+from discriminator import Discriminator, evaluate_discriminator, pretrain_discriminator
 from environment import TokenGenerationEnv
 from callback import CustomCallback
 
@@ -23,10 +23,12 @@ from callback import CustomCallback
 BASE_DIR = Path(os.getenv('WORKING_DIR', Path(os.path.dirname(os.path.abspath(__file__)))))
 SAVE_DIR = BASE_DIR / "saved_models"
 RESULTS_DIR = BASE_DIR / "results"
+TEXT_DIR = BASE_DIR / "text_file_train"
 
 # Create directories if they don't exist
 os.makedirs(SAVE_DIR, exist_ok=True)
 os.makedirs(RESULTS_DIR, exist_ok=True)
+os.makedirs(TEXT_DIR, exist_ok=True)
 
 # ============= FIXED PARAMETERS =============
 # Data parameters
@@ -40,22 +42,6 @@ ORACLE_EMB_DIM = 32
 ORACLE_HIDDEN_DIM = 32
 ORACLE_PARAMS_PATH = SAVE_DIR / 'target_params.pkl'
 
-# GENERATOR
-G_NUM_LAYERS = 2
-G_LR_PATIENCE = 5
-G_LR_DECAY = 0.5
-
-# DISCRIMINATOR
-DISCRIMINATOR_EMB_DIM = 64
-DISCRIMINATOR_HIDDEN_DIM = 128
-D_DROPOUT_RATE = 0.2
-D_OUTER_EPOCH = 15
-D_INNTER_EPOCH = 3
-D_BATCH_SIZE = 128
-D_LR_PATIENCE = 10
-D_LR_DECAY = 0.5
-D_LR_MIN = 1e-5
-D_PRETRAIN_LR = 5e-3
 
 def set_seed(seed):
     """Set random seed for reproducibility."""
@@ -74,6 +60,7 @@ def main():
     # Get environment variables
     config_path = os.getenv('CONFIG_PATH')
     seed = int(os.getenv('SEED', '0'))
+    config_id = int(os.getenv('CONFIG_ID', '-1'))
     output_dir = Path(os.getenv('OUTPUT_DIR', RESULTS_DIR / "ppo_seqgan_runs"))
     
     # Set seed for reproducibility
@@ -102,20 +89,19 @@ def main():
     
     # Start timing
     start_time = time.time()
-    
+
     # Create log file paths
-    log_folder = output_dir
-    log_file = os.path.join(log_folder, "training.log")
-    gen_pretrain_log = os.path.join(log_folder, "1_generator_pretrain.txt")
-    disc_pretrain_log = os.path.join(log_folder, "2_discriminator_pretrain.txt")
-    ppo_log = os.path.join(log_folder, "0_adversarial_training_log.txt")
+    adversarial_log = os.path.join(TEXT_DIR, f"config_{config_id}_seed_{seed}_0_adversarial_training_log.txt")
+    gen_pretrain_log = os.path.join(TEXT_DIR, f"config_{config_id}_seed_{seed}_1_generator_pretrain.txt")
+    disc_pretrain_log = os.path.join(TEXT_DIR, f"config_{config_id}_seed_{seed}_2_discriminator_pretrain.txt")
+    reward_log = os.path.join(TEXT_DIR, f"config_{config_id}_seed_{seed}_3_rewards_log.txt")
     
     # Print training configuration
     print(f"Training PPO-SeqGAN with:")
     print(f"  Seed: {seed}")
     print(f"  Device: {device}")
     print(f"  Generator Hidden Dim: {config['g_hidden_dim']}")
-    print(f"  PPO Learning Rate: {config['ppo_learning_rate']}")
+    print(f"  PPO Learning Rate: {config['g_learning_rate']}")
     print(f"  Discriminator Learning Rate: {config['d_learning_rate']}")
     print(f"  PPO Total Timesteps: {config['ppo_total_timesteps']}")
     
@@ -153,31 +139,29 @@ def main():
         sequence_length=SEQ_LENGTH,
         start_token=START_TOKEN,
         device=device,
-        num_layers=G_NUM_LAYERS
+        num_layers=config['g_num_layers'],
     )
     
     # Create discriminator
     discriminator = Discriminator(
         vocab_size=VOCAB_SIZE,
-        embedding_dim=DISCRIMINATOR_EMB_DIM,
-        hidden_dim=DISCRIMINATOR_HIDDEN_DIM,
-        dropout_rate=D_DROPOUT_RATE,
+        embedding_dim=config['d_emb_dim'],
+        hidden_dim=config['d_hidden_dim'],
+        dropout_rate=config['d_dropout'],
+        num_layers=config['d_num_layers'],
         device=device
     )
     
     # Initialize optimizers
-    g_optimizer_pretrain = th.optim.Adam(generator.parameters(), lr=config['g_pretrain_lr'])
-    d_optimizer_pretrain = th.optim.Adam(discriminator.parameters(), lr=D_PRETRAIN_LR)
+    g_optimizer_pretrain = th.optim.Adam(generator.parameters(), lr=config['g_lr_pretrain'])
+    d_pretrain_optimizer = th.optim.Adam(discriminator.parameters(), lr=config['d_lr_pretrain'])
 
-    # Use different learning rates for pretraining and adversarial phases
-    
     d_optimizer = th.optim.Adam(discriminator.parameters(), lr=config['d_learning_rate'])
-    
+
     gen_weights_path = None
     
     # Pretraining phase
     if config.get('do_pretrain', True):
-        
         print("Starting generator pretraining...")
         
         pretrain_generator(
@@ -188,9 +172,9 @@ def main():
             batch_size=config['g_pretrain_batch_size'],
             generated_num=GENERATED_NUM,
             positive_samples=positive_samples,
-            eval_freq=config['eval_freq'],
-            lr_patience=G_LR_PATIENCE,
-            lr_decay=G_LR_DECAY,
+            eval_freq=config['g_eval_pretrain_epochs'],
+            lr_patience=config['g_lr_patience'],
+            lr_decay=config['g_lr_decay'],
             log_path=gen_pretrain_log
         )
 
@@ -200,21 +184,21 @@ def main():
             target_lstm=oracle,
             generator=generator,
             discriminator=discriminator,
-            optimizer=d_optimizer_pretrain,
-            outer_epochs=D_OUTER_EPOCH,
-            inner_epochs=D_INNTER_EPOCH,
-            batch_size=D_BATCH_SIZE,
+            optimizer=d_pretrain_optimizer,
+            outer_epochs=config['d_outer_epochs'],
+            inner_epochs=config['d_inner_epochs'],
+            batch_size=config['d_batch_size'],
             generated_num=GENERATED_NUM,
             positive_samples=positive_samples,
             log_file=disc_pretrain_log,
-            lr_patience=D_LR_PATIENCE,
-            lr_decay=D_LR_DECAY,
-            min_lr=D_LR_MIN
+            lr_patience=config['d_lr_patience'],
+            lr_decay=config['d_lr_decay'],
+            min_lr=config['d_lr_min'],
         )
 
         # Save pretrained models
-        gen_weights_path = os.path.join(output_dir, "generator_pretrained.pth")
-        disc_save_path = os.path.join(output_dir, "discriminator_pretrained.pth")
+        gen_weights_path = os.path.join(output_dir, f"{seed}_generator_pretrained.pth")
+        disc_save_path = os.path.join(output_dir, f"{seed}_discriminator_pretrained.pth")
         
         # Save generator
         th.save({
@@ -225,15 +209,11 @@ def main():
         # Save discriminator
         th.save({
             'model_state_dict': discriminator.state_dict(),
-            'optimizer_state_dict': d_optimizer_pretrain.state_dict()
+            'optimizer_state_dict': d_pretrain_optimizer.state_dict()
         }, disc_save_path)
         
-        print(f"Saved pretrained models to {output_dir}")
         
-        ## TRANSFER OPTIMIZER STATE ##
-        print("Transferring optimizer state from pretraining to adversarial phase...")
-        
-        pretrain_state = d_optimizer_pretrain.state_dict()
+        pretrain_state = d_pretrain_optimizer.state_dict()
         d_optimizer_state = d_optimizer.state_dict()
 
         # Copy everything except param_groups (which contains the learning rate)
@@ -299,8 +279,8 @@ def main():
         except Exception as e:
             print(f"Error loading pretrained models: {e}")
             sys.exit(1)
-    
 
+    
     # Set up the environment for PPO
     env = TokenGenerationEnv(
         discriminator=discriminator,
@@ -318,26 +298,26 @@ def main():
         d_optimizer=d_optimizer,
         d_steps=config['d_steps'],
         k_epochs=config['k_epochs'],
-        d_batch_size=D_BATCH_SIZE,
+        d_batch_size=config['d_batch_size'],
         positive_samples=positive_samples,
         sequence_length=SEQ_LENGTH,
         start_token=START_TOKEN,
         generated_num=GENERATED_NUM,
         eval_freq=config['eval_freq'],
         verbose=0,
-        log_path=ppo_log
+        log_path=adversarial_log
     )
     
     # Configure learning rate for PPO
     if config.get('use_linear_lr_decay', False):
         # Use linearly decaying learning rate
         min_lr = config['min_ppo_lr']
-        max_lr = config['ppo_learning_rate']
+        max_lr = config['g_learning_rate']
         timesteps = config['ppo_total_timesteps']
         learning_rate = get_linear_fn(min_lr, max_lr, timesteps)
     else:
         # Use constant learning rate
-        learning_rate = config['ppo_learning_rate']
+        learning_rate = config['g_learning_rate']
     
     # Create PPO model
     ppo_model = RecurrentPPO(
@@ -356,16 +336,15 @@ def main():
         max_grad_norm=config['ppo_max_grad_norm'],
         use_sde=config.get('ppo_use_sde', False),
         verbose=0,
-
         policy_kwargs=dict(
             lstm_hidden_size=config['g_hidden_dim'],
-            n_lstm_layers=G_NUM_LAYERS,
-            shared_lstm=True,
-            enable_critic_lstm=False,
+            n_lstm_layers=config['g_num_layers'],
+            shared_lstm=False,
+            enable_critic_lstm=True,
             net_arch=dict(pi=[], vf=[]),
             optimizer_class=th.optim.Adam,
             optimizer_kwargs=dict(
-                betas=(0.95, 0.999)  # Increase beta1 from default 0.9 to 0.95
+                betas=(0.95, 0.999)
                 )
         )
     )
@@ -381,7 +360,7 @@ def main():
             hidden_dim=config['g_hidden_dim'],
             sequence_length=SEQ_LENGTH,
             start_token=START_TOKEN,
-            num_layers=G_NUM_LAYERS,
+            num_layers=config['g_num_layers'],
             device=device
         )
 
@@ -393,50 +372,6 @@ def main():
         callback=callback
     )
     
-    # # Generate samples from the trained model for evaluation
-    # print("Evaluating final model...")
-    # final_samples = []
-    
-    # # Generate sequences using the PPO policy
-    # num_eval_samples = 500
-    
-    # obs = np.array([START_TOKEN] * num_eval_samples)
-    # lstm_states = None
-    # episode_starts = np.ones((num_eval_samples,), dtype=bool)
-    
-    # # Initialize all sequences with start token
-    # sequences = [[START_TOKEN] for _ in range(num_eval_samples)]
-    
-    # # Generate all sequences in parallel
-    # for _ in range(SEQ_LENGTH - 1):
-    #     actions, lstm_states = ppo_model.predict(
-    #         obs, state=lstm_states, episode_start=episode_starts, deterministic=False
-    #     )
-    #     for i, action in enumerate(actions):
-    #         sequences[i].append(int(action))
-    #     obs = actions
-    #     episode_starts = np.zeros((num_eval_samples,), dtype=bool)
-    
-    # # Convert to tensor for evaluation
-    # final_sequences = th.tensor(sequences, dtype=th.long, device=device)
-    
-    # # Calculate final metrics
-    # final_nll = oracle.calculate_nll(final_sequences)
-    
-    # # Evaluate using discriminator
-    # discriminator.eval()
-    # with th.no_grad():
-    #     real_samples = positive_samples[:num_eval_samples]
-    #     real_preds = discriminator.get_sequence_probability(real_samples)
-    #     fake_preds = discriminator.get_sequence_probability(final_sequences)
-        
-    #     real_correct = (real_preds >= 0.5).sum().item()
-    #     fake_correct = (fake_preds < 0.5).sum().item()
-        
-    #     accuracy = (real_correct + fake_correct) / (2 * num_eval_samples)
-    #     real_prob = real_preds.mean().item()
-    #     fake_prob = fake_preds.mean().item()
-    
     # Record training time
     training_time = time.time() - start_time
     
@@ -447,19 +382,7 @@ def main():
     # Create results summary
     results = {
         "config": config_with_seed,
-        "training_time": training_time,
-        # "final_metrics": {
-        #     "nll": final_nll,
-        #     "discriminator": {
-        #         "accuracy": accuracy,
-        #         "real_prob": float(real_prob),
-        #         "fake_prob": float(fake_prob)
-        #     }
-        # },
-        # "model_paths": {
-        #     "ppo": None,
-        #     "discriminator": str(disc_save_path)
-        # }
+        "training_time": training_time
     }
     
     # Save results
@@ -468,12 +391,6 @@ def main():
         json.dump(results, f, indent=2)
     
     print(f"Training completed in {training_time:.2f} seconds!")
-    # print(f"Results saved to {output_dir}")
-    # print(f"Final NLL: {final_nll:.4f}")
-    # print(f"Final Discriminator Metrics:")
-    # print(f"  Accuracy: {accuracy:.4f}")
-    # print(f"  Real Prob: {real_prob:.4f}")
-    # print(f"  Fake Prob: {fake_prob:.4f}")
     
     # Close environment
     env.close()
