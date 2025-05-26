@@ -82,7 +82,7 @@ PARALLEL_CONFIG = {
         'k_epochs':                 [2],
 
         'd_learning_rate':          [1e-6],
-        'g_learning_rate':          [2.5e-4],
+        'g_learning_rate':          [2.5e-4]
 
     },
     'output_dir': RESULTS_DIR,

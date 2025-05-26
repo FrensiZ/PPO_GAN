@@ -23,7 +23,7 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 
 PARALLEL_CONFIG = {
     
-    'num_seeds':                    6,
+    'num_seeds':                    30,
     
     'param_grid': {
 
@@ -82,7 +82,7 @@ PARALLEL_CONFIG = {
         'k_epochs':                 [2],
 
         'd_learning_rate':          [1e-6],
-        'g_learning_rate':          [8e-4, 4e-4]
+        'g_learning_rate':          [2.5e-4],
 
     },
     'output_dir': RESULTS_DIR,
@@ -94,7 +94,7 @@ def get_config_hash(config):
 
 def get_free_gpus():
     """Find all free GPUs to use from the allowed GPUs."""
-    allowed_gpus = [1,2,3,4,6,7]  # Only use these GPUs
+    allowed_gpus = [0,1,2,3,4,6,7]  # Only use these GPUs
     try:
         result = subprocess.run(
             ['nvidia-smi', '--query-gpu=memory.used,memory.free,utilization.gpu', '--format=csv,nounits,noheader'], 
